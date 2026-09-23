@@ -1,20 +1,11 @@
-import { mkdirSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { DatabaseSync } from "node:sqlite";
+import type { DatabaseSync } from "node:sqlite";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { SiteHeader } from "../../../components/site-header.tsx";
 import { getShow, loadCatalog, slugFromName, type Show } from "../../../lib/catalog.ts";
-import { averageScore, initReviewsSchema, listReviews } from "../../../lib/reviews.ts";
-
-function openReviewsDb(): DatabaseSync {
-  const dbPath = join(process.cwd(), "data/panel-club.sqlite");
-  mkdirSync(dirname(dbPath), { recursive: true });
-  const db = new DatabaseSync(dbPath);
-  initReviewsSchema(db);
-  return db;
-}
+import { openReviewsDb } from "../../../lib/reviews-db.ts";
+import { averageScore, listReviews } from "../../../lib/reviews.ts";
 
 function showScoreSummary(db: DatabaseSync, show: Show): { average: number | null; reviewCount: number } {
   let total = 0;

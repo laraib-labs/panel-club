@@ -1,8 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { mkdirSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-import { DatabaseSync } from "node:sqlite";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 
@@ -10,10 +6,10 @@ import { Player } from "../../../../../components/player.tsx";
 import { SiteHeader } from "../../../../../components/site-header.tsx";
 import { ReviewForm } from "../../../../../components/review-form.tsx";
 import { getEpisode, getShow, loadCatalog } from "../../../../../lib/catalog.ts";
+import { openReviewsDb } from "../../../../../lib/reviews-db.ts";
 import type { Review } from "../../../../../lib/reviews.ts";
 import {
   averageScore,
-  initReviewsSchema,
   listReviews,
   saveReview,
 } from "../../../../../lib/reviews.ts";
@@ -22,18 +18,6 @@ type ViewerCookie = {
   id: string;
   displayName: string;
 };
-
-const dbPath = join(
-  dirname(fileURLToPath(import.meta.url)),
-  "../../../../../../data/panel-club.sqlite",
-);
-
-function openReviewsDb(): DatabaseSync {
-  mkdirSync(dirname(dbPath), { recursive: true });
-  const db = new DatabaseSync(dbPath);
-  initReviewsSchema(db);
-  return db;
-}
 
 function parseViewerCookie(value: string | undefined): ViewerCookie | null {
   if (!value) {
