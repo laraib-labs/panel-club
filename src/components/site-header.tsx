@@ -16,7 +16,10 @@ const links: { href: string; label: string; key: NavKey }[] = [
 export function SiteHeader({ current }: SiteHeaderProps) {
   return (
     <header className="bar float-bar">
-      <strong className="brand">Panel Club</strong>
+      <strong className="brand">
+        <i />
+        Panel Club
+      </strong>
       {links.map((link) => (
         <Link
           key={link.key}
