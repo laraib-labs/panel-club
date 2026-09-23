@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Panel platform wireframe</title>
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #e6e6e6;
+      color: #111;
+      font: 15px/1.4 ui-sans-serif, system-ui, sans-serif;
+    }
+    a { color: inherit; }
+    .jump {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 12px 16px;
+      background: #111;
+      color: #fff;
+    }
+    .jump a {
+      color: #fff;
+      text-decoration: none;
+      border: 1px solid #777;
+      padding: 4px 8px;
+    }
+    main { padding: 24px 16px 96px; }
+    .screen { max-width: 980px; margin: 0 auto 48px; }
+    .screen h2 { margin: 0 0 8px; font-size: 14px; letter-spacing: 0.04em; text-transform: uppercase; }
+    .frame { background: #fff; border: 1px solid #111; }
+    .bar, .filters, .row, .card, .ep, .box, .note, .review, .form, .player, .empty {
+      border: 1px solid #111;
+    }
+    .bar {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      padding: 12px 16px;
+      background: #f7f7f7;
+    }
+    .bar strong { margin-right: auto; }
+    .bar a { text-decoration: none; padding-bottom: 2px; }
+    .bar a[aria-current="page"] { border-bottom: 2px solid #111; }
+    .pad { padding: 16px; display: grid; gap: 12px; }
+    h3 { margin: 0; font-size: 22px; }
+    .meta { margin: 0; color: #333; }
+    .filters { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px; }
+    .filters span, .pill {
+      border: 1px solid #111;
+      padding: 4px 8px;
+      background: #fff;
+    }
+    .filters .on, .pill { background: #111; color: #fff; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .card, .ep, .review, .person-block { padding: 12px; background: #f3f3f3; }
+    .card h4, .ep strong, .review strong { margin: 0 0 4px; }
+    .player {
+      height: 220px;
+      display: grid;
+      place-items: center;
+      background: #d9d9d9;
+      text-align: center;
+      padding: 16px;
+    }
+    .row { display: flex; gap: 8px; padding: 8px; align-items: center; background: #fff; }
+    .grow { flex: 1; }
+    .form { padding: 12px; display: grid; gap: 8px; background: #fff; }
+    .form .line { height: 32px; border: 1px solid #111; background: #f7f7f7; padding: 6px 8px; }
+    .stars { letter-spacing: 4px; }
+    .note { padding: 8px 12px; background: #eee; }
+    .split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    textarea[data-screen] {
+      width: 100%;
+      margin-top: 8px;
+      min-height: 64px;
+      border: 1px dashed #111;
+      padding: 8px;
+      font: inherit;
+      background: #fff;
+    }
+    #copy {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      background: #111;
+      color: #fff;
+      border: 0;
+      padding: 10px 14px;
+      font: inherit;
+      cursor: pointer;
+    }
+    #copy-status { margin-left: 8px; font-size: 13px; }
+    @media (max-width: 700px) {
+      .grid, .split { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="jump" aria-label="Screens">
+    <a href="#directory">Directory</a>
+    <a href="#show">Show</a>
+    <a href="#episode">Episode</a>
+    <a href="#episode-cast">Episode with Cast</a>
+    <a href="#upcoming">Upcoming</a>
+    <a href="#upcoming-empty">Upcoming empty</a>
+    <a href="#person">Person</a>
+    <a href="#library">Library</a>
+    <a href="#library-empty">Library empty</a>
+    <a href="#search-empty">Search empty</a>
+    <a href="#not-found">Not found</a>
+  </nav>
+  <main>
+    <section class="screen" id="directory">
+      <h2>Directory</h2>
+      <div class="frame">
+        <header class="bar">
+          <strong>Panel Club</strong>
+          <a href="#directory" aria-current="page">Discover</a>
+          <a href="#upcoming">Upcoming</a>
+          <a href="#person">People</a>
+          <a href="#library">Library</a>
+        </header>
+        <div class="pad">
+          <h3>Find your kind of funny</h3>
+          <p class="meta">16 shows. Search, then open a show.</p>
+          <div class="row"><span class="grow">Search shows, hosts, guests or episodes</span></div>
+          <div class="filters" aria-label="Categories">
+            <span class="on">All shows</span>
+            <span>Panel shows</span>
+            <span>Game shows</span>
+            <span>Roasts</span>
+            <span>Advice &amp; banter</span>
+          </div>
+          <div class="grid">
+            <a class="card" href="#show">
+              <h4>India's Got Latent</h4>
+              <p class="meta">Samay Raina · Panel shows</p>
+              <p class="meta">7 episodes · 4.6</p>
+            </a>
+            <a class="card" href="#show">
+              <h4>Pretty Good Roast Show</h4>
+              <p class="meta">Aashish Solanki · Roasts</p>
+              <p class="meta">6 episodes · No score yet</p>
+            </a>
+            <a class="card" href="#show">
+              <h4>Relationshit Advice</h4>
+              <p class="meta">Raunaq Rajani · Advice &amp; banter</p>
+              <p class="meta">111 episodes · 4.2</p>
+            </a>
+            <a class="card" href="#show">
+              <h4>The General Fun Game Show</h4>
+              <p class="meta">Kaneez Surka · Game shows</p>
+              <p class="meta">19 episodes · No score yet</p>
+            </a>
+          </div>
+        </div>
+      </div>
+      <textarea data-screen="directory" placeholder="What is wrong on this screen?"></textarea>
+    </section>
+
+    <section class="screen" id="show">
+      <h2>Show</h2>
+      <div class="frame">
+        <header class="bar">
+          <strong>Panel Club</strong>
+          <a href="#directory">Discover</a>
+          <a href="#upcoming">Upcoming</a>
+          <a href="#person">People</a>
+          <a href="#library">Library</a>
+        </header>
+        <div class="pad">
+          <p class="meta"><a href="#directory">Discover</a> / India's Got Latent</p>
+          <h3>India's Got Latent</h3>
+          <p class="meta">Hosted by <a href="#person">Samay Raina</a> · Panel shows · 4.6 from 12 reviews</p>
+          <p class="note">Season 1 is no longer public on the official channel. The cover is Season 2, Episode 1.</p>
+          <a class="ep" href="#episode">
+            <strong>S2 EP1 ft. Alia Bhatt, Sharvari, Ashish Solanki</strong>
+            <p class="meta">59 min · 4.8 · Aired</p>
+          </a>
+          <a class="ep" href="#episode">
+            <strong>S2 EP2 ft. Harssh Limbachiya, Kiku Sharda, Chandan Prabhakar</strong>
+            <p class="meta">61 min · No score yet · Aired</p>
+          </a>
+          <a class="ep" href="#episode-cast">
+            <strong>Example file episode</strong>
+            <p class="meta">Has a media file · Cast available on the player</p>
+          </a>
+        </div>
+      </div>
+      <textarea data-screen="show" placeholder="What is wrong on this screen?"></textarea>
+    </section>
+
+    <section class="screen" id="episode">
+      <h2>Episode · YouTube, Cast hidden</h2>
+      <div class="frame">
+        <header class="bar">
+          <strong>Panel Club</strong>
+          <a href="#directory">Discover</a>
+          <a href="#upcoming">Upcoming</a>
+          <a href="#person">People</a>
+          <a href="#library">Library</a>
+        </header>
+        <div class="pad">
+          <p class="meta"><a href="#show">India's Got Latent</a> / S2 EP1</p>
+          <h3>S2 EP1 ft. Alia Bhatt, Sharvari, Ashish Solanki</h3>
+          <p class="meta">59 min · Aired · 4.8 from 3 reviews</p>
+          <div class="player">
+            <div>
+              <strong>Playing on this page</strong>
+              <p class="meta">YouTube embed. No Cast button.</p>
+            </div>
+          </div>
+          <div class="row">
+            <span>Save</span>
+            <span>Mark finished</span>
+          </div>
+          <p class="meta">Guests: <a href="#person">Alia Bhatt</a>, <a href="#person">Sharvari</a>, <a href="#person">Ashish Solanki</a></p>
+          <article class="review">
+            <strong>Aisha · 5 stars · Spoiler</strong>
+            <p class="meta">The review body is hidden.</p>
+            <span class="pill">Show spoiler</span>
+          </article>
+          <article class="review">
+            <strong>Rohan · 4 stars</strong>
+            <p class="meta">The panel keeps the bits moving. Alia’s round is the one to stay for.</p>
+          </article>
+          <form class="form" action="#episode">
+            <strong>Your review replaces the last one from this browser</strong>
+            <div class="line">Display name</div>
+            <div class="stars">1 2 3 4 5</div>
+            <label><input type="checkbox" /> This review spoils the episode</label>
+            <div class="line">Review</div>
+            <div class="row"><span>Submit review</span></div>
+          </form>
+        </div>
+      </div>
+      <textarea data-screen="episode" placeholder="What is wrong on this screen?"></textarea>
+    </section>
+
+    <section class="screen" id="episode-cast">
+      <h2>Episode · media file, Cast shown</h2>
+      <div class="frame">
+        <header class="bar">
+          <strong>Panel Club</strong>
+          <a href="#directory">Discover</a>
+          <a href="#upcoming">Upcoming</a>
+          <a href="#person">People</a>
+          <a href="#library">Library</a>
+        </header>
+        <div class="pad">
+          <p class="meta"><a href="#show">India's Got Latent</a> / Example file episode</p>
+          <h3>Example file episode</h3>
+          <p class="meta">Not in the YouTube seed. Shown only so Cast has a place.</p>
+          <div class="player">
+            <div>
+              <strong>Playing on this page</strong>
+              <p class="meta">Video file. A TV is available.</p>
+              <span class="pill">Cast</span>
+            </div>
+          </div>
+          <p class="note">Cast opens the device picker. Play and pause stay on this page.</p>
+        </div>
+      </div>
+      <textarea data-screen="episode-cast" placeholder="What is wrong on this screen?"></textarea>
+    </section>
+
+    <section class="screen" id="upcoming">
+      <h2>Upcoming</h2>
+      <div class="frame">
+        <header class="bar">
+          <strong>Panel Club</strong>
+          <a href="#directory">Discover</a>
+          <a href="#upcoming" aria-current="page">Upcoming</a>
+          <a href="#person">People</a>
+          <a href="#library">Library</a>
+        </header>
+        <div class="pad">
+          <h3>Upcoming</h3>
+          <a class="ep" href="#episode">
+            <strong>Lie Hard · S4 EP1</strong>
+            <p class="meta">Gaurav Kapoor · Premieres 4 Oct 2026</p>
+            <p class="meta">Example row. The seed has no upcoming episode yet.</p>
+          </a>
+          <h3>Aired</h3>
+          <a class="ep" href="#show"><strong>India's Got Latent</strong><p class="meta">7 episodes · Samay Raina</p></a>
+          <a class="ep" href="#show"><strong>Pretty Good Roast Show</strong><p class="meta">6 episodes · Aashish Solanki</p></a>
+          <a class="ep" href="#show"><strong>Lie Hard</strong><p class="meta">19 episodes · Gaurav Kapoor</p></a>
+        </div>
+      </div>
+      <textarea data-screen="upcoming" placeholder="What is wrong on this screen?"></textarea>
+    </section>
+
+    <section class="screen" id="upcoming-empty">
+      <h2>Upcoming · nothing announced</h2>
+      <div class="frame">
+        <header class="bar">
+          <strong>Panel Club</strong>
+          <a href="#directory">Discover</a>
+          <a href="#upcoming" aria-current="page">Upcoming</a>
+          <a href="#person">People</a>
+          <a href="#library">Library</a>
+        </header>
+        <div class="pad">
+          <h3>Upcoming</h3>
+          <p class="empty note">Nothing announced. New tapings show up here with a date.</p>
+          <h3>Aired</h3>
+          <a class="ep" href="#show"><strong>India's Got Latent</strong><p class="meta">7 episodes · Samay Raina</p></a>
+        </div>
+      </div>
+      <textarea data-screen="upcoming-empty" placeholder="What is wrong on this screen?"></textarea>
+    </section>
+
+    <section class="screen" id="person">
+      <h2>Person</h2>
+      <div class="frame">
+        <header class="bar">
+          <strong>Panel Club</strong>
+          <a href="#directory">Discover</a>
+          <a href="#upcoming">Upcoming</a>
+          <a href="#person" aria-current="page">People</a>
+          <a href="#library">Library</a>
+        </header>
+        <div class="pad">
+          <p class="meta"><a href="#directory">People</a> / Kaustubh Agarwal</p>
+          <h3>Kaustubh Agarwal</h3>
+          <div class="split">
+            <div class="person-block">
+              <strong>Hosts</strong>
+              <p class="meta"><a href="#show">Akal ke Ghode</a> · 13 episodes</p>
+              <p class="meta"><a href="#show">Loose Emotions</a> · with Vidit Sharma · 17 episodes</p>
+            </div>
+            <div class="person-block">
+              <strong>Guest</strong>
+              <p class="meta"><a href="#episode">India's Got Latent · S2 EP7</a></p>
+              <p class="meta"><a href="#episode">Judge Me If You Can · Ep 01</a></p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <textarea data-screen="person" placeholder="What is wrong on this screen?"></textarea>
+    </section>
+
+    <section class="screen" id="library">
+      <h2>Library</h2>
+      <div class="frame">
+        <header class="bar">
+          <strong>Panel Club</strong>
+          <a href="#directory">Discover</a>
+          <a href="#upcoming">Upcoming</a>
+          <a href="#person">People</a>
+          <a href="#library" aria-current="page">Library</a>
+        </header>
+        <div class="pad">
+          <h3>Your library</h3>
+          <p class="meta">Stored in this browser. Not an account.</p>
+          <h4>Continue</h4>
+          <a class="ep" href="#episode">
+            <strong>India's Got Latent · S2 EP1</strong>
+            <p class="meta">12 min in · not finished</p>
+          </a>
+          <h4>History</h4>
+          <a class="ep" href="#episode">
+            <strong>Pretty Good Roast Show · S1 EP1</strong>
+            <p class="meta">Finished</p>
+          </a>
+          <h4>Watchlist</h4>
+          <a class="ep" href="#episode">
+            <strong>Lie Hard · Ep 1</strong>
+            <p class="meta">Saved</p>
+          </a>
+        </div>
+      </div>
+      <textarea data-screen="library" placeholder="What is wrong on this screen?"></textarea>
+    </section>
+
+    <section class="screen" id="library-empty">
+      <h2>Library · empty</h2>
+      <div class="frame">
+        <header class="bar">
+          <strong>Panel Club</strong>
+          <a href="#directory">Discover</a>
+          <a href="#upcoming">Upcoming</a>
+          <a href="#person">People</a>
+          <a href="#library" aria-current="page">Library</a>
+        </header>
+        <div class="pad">
+          <h3>Your library</h3>
+          <p class="empty note">Nothing in progress. You have not saved an episode. Open a show from Discover.</p>
+          <p><a href="#directory">Discover shows</a></p>
+        </div>
+      </div>
+      <textarea data-screen="library-empty" placeholder="What is wrong on this screen?"></textarea>
+    </section>
+
+    <section class="screen" id="search-empty">
+      <h2>Directory · no matches</h2>
+      <div class="frame">
+        <header class="bar">
+          <strong>Panel Club</strong>
+          <a href="#directory" aria-current="page">Discover</a>
+          <a href="#upcoming">Upcoming</a>
+          <a href="#person">People</a>
+          <a href="#library">Library</a>
+        </header>
+        <div class="pad">
+          <h3>Find your kind of funny</h3>
+          <div class="row"><span class="grow">xyz</span><span>Clear</span></div>
+          <div class="filters">
+            <span class="on">All shows</span>
+            <span>Panel shows</span>
+            <span>Game shows</span>
+            <span>Roasts</span>
+            <span>Advice &amp; banter</span>
+          </div>
+          <p class="empty note">No shows match “xyz”.</p>
+        </div>
+      </div>
+      <textarea data-screen="search-empty" placeholder="What is wrong on this screen?"></textarea>
+    </section>
+
+    <section class="screen" id="not-found">
+      <h2>Not found</h2>
+      <div class="frame">
+        <header class="bar">
+          <strong>Panel Club</strong>
+          <a href="#directory">Discover</a>
+          <a href="#upcoming">Upcoming</a>
+          <a href="#person">People</a>
+          <a href="#library">Library</a>
+        </header>
+        <div class="pad">
+          <h3>That show or episode is not in the catalog.</h3>
+          <p class="meta">The link may be old, or the episode was removed from the public list.</p>
+          <p><a href="#directory">Back to Discover</a></p>
+        </div>
+      </div>
+      <textarea data-screen="not-found" placeholder="What is wrong on this screen?"></textarea>
+    </section>
+  </main>
+  <button id="copy" type="button">Copy feedback <span id="copy-status"></span></button>
+  <script>
+    document.getElementById("copy").addEventListener("click", async function () {
+      var parts = [];
+      document.querySelectorAll("textarea[data-screen]").forEach(function (box) {
+        var text = box.value.trim();
+        if (!text) return;
+        parts.push("## " + box.getAttribute("data-screen") + "\n\n" + text);
+      });
+      var status = document.getElementById("copy-status");
+      if (!parts.length) {
+        status.textContent = "Nothing to copy";
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(parts.join("\n\n"));
+        status.textContent = "Copied";
+      } catch (err) {
+        status.textContent = "Copy failed";
+      }
+    });
+  </script>
+</body>
+</html>
