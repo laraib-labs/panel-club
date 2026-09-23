@@ -3,113 +3,257 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Panel platform wireframe</title>
+  <title>Panel Club wireframe</title>
   <style>
-    :root { color-scheme: light; }
+    :root {
+      color-scheme: dark;
+      --bg: #111210;
+      --surface: #1c1d18;
+      --surface-2: #26281f;
+      --text: #f3f4ee;
+      --muted: #a3a496;
+      --line: #34362c;
+      --accent: #d4ef55;
+      --ink: #17180f;
+      --danger: #ffb4a8;
+    }
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      background: #e6e6e6;
-      color: #111;
-      font: 15px/1.4 ui-sans-serif, system-ui, sans-serif;
+      background: #0b0c09;
+      color: var(--text);
+      font: 16px/1.45 ui-sans-serif, system-ui, sans-serif;
     }
     a { color: inherit; }
+    button, .hit {
+      font: inherit;
+      color: inherit;
+      cursor: pointer;
+    }
     .jump {
       position: sticky;
-      top: 0;
-      z-index: 2;
+      top: 62px;
+      z-index: 3;
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
       padding: 12px 16px;
-      background: #111;
-      color: #fff;
+      background: #000;
+      border-bottom: 1px solid var(--line);
     }
-    .jump a {
-      color: #fff;
-      text-decoration: none;
-      border: 1px solid #777;
-      padding: 4px 8px;
-    }
-    main { padding: 24px 16px 96px; }
-    .screen { max-width: 980px; margin: 0 auto 48px; }
-    .screen h2 { margin: 0 0 8px; font-size: 14px; letter-spacing: 0.04em; text-transform: uppercase; }
-    .frame { background: #fff; border: 1px solid #111; }
-    .bar, .filters, .row, .card, .ep, .box, .note, .review, .form, .player, .empty {
-      border: 1px solid #111;
-    }
-    .bar {
+    .float-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 4;
       display: flex;
-      gap: 16px;
+      flex-wrap: wrap;
+      gap: 18px;
       align-items: center;
-      padding: 12px 16px;
-      background: #f7f7f7;
+      padding: 14px 20px;
+      background: rgba(17, 18, 16, 0.94);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(10px);
     }
-    .bar strong { margin-right: auto; }
-    .bar a { text-decoration: none; padding-bottom: 2px; }
-    .bar a[aria-current="page"] { border-bottom: 2px solid #111; }
-    .pad { padding: 16px; display: grid; gap: 12px; }
-    h3 { margin: 0; font-size: 22px; }
-    .meta { margin: 0; color: #333; }
-    .filters { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px; }
-    .filters span, .pill {
-      border: 1px solid #111;
-      padding: 4px 8px;
-      background: #fff;
+    body { padding-top: 62px; }
+    .jump a {
+      color: var(--text);
+      text-decoration: none;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 6px 12px;
+      min-height: 36px;
     }
-    .filters .on, .pill { background: #111; color: #fff; }
+    main { padding: 28px 16px 120px; }
+    .screen { display: none; max-width: 1040px; margin: 0 auto 56px; }
+    .screen.is-on { display: block; }
+    .chrome {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .chrome h2 {
+      margin: 0;
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .approve { display: flex; gap: 8px; align-items: center; color: var(--accent); font-size: 14px; }
+    .frame {
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      overflow: hidden;
+    }
+    .brand { margin-right: auto; text-decoration: none; font-weight: 700; letter-spacing: -0.02em; }
+    .brand i {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      margin-right: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+    .float-bar a {
+      text-decoration: none;
+      color: var(--muted);
+      min-height: 40px;
+      display: inline-flex;
+      align-items: center;
+    }
+    .float-bar a[aria-current="page"] { color: var(--text); box-shadow: inset 0 -2px 0 var(--accent); }
+    .pad { padding: 22px 20px 28px; display: grid; gap: 16px; }
+    h3 { margin: 0; font-size: 32px; letter-spacing: -0.03em; line-height: 1.1; }
+    h4 { margin: 16px 0 0; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+    .meta { margin: 0; color: var(--muted); }
+    .search, .filters, .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .search {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 4px 8px 4px 16px;
+      min-height: 48px;
+    }
+    .search span { flex: 1; color: var(--muted); }
+    .chip, .btn, .card, .ep, .person-link {
+      border: 1px solid var(--line);
+      background: var(--surface);
+      border-radius: 12px;
+      text-decoration: none;
+    }
+    .chip, .btn {
+      min-height: 40px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+    }
+    .chip.on, .btn.primary {
+      background: var(--accent);
+      color: var(--ink);
+      border-color: var(--accent);
+      font-weight: 650;
+    }
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .card, .ep, .review, .person-block { padding: 12px; background: #f3f3f3; }
-    .card h4, .ep strong, .review strong { margin: 0 0 4px; }
+    .card, .ep, .person-link { padding: 14px 16px; display: block; }
+    .card h4, .ep strong, .review strong { margin: 0 0 4px; letter-spacing: 0; text-transform: none; font-size: 17px; color: var(--text); }
+    .score { color: var(--accent); }
     .player {
-      height: 220px;
+      min-height: 240px;
+      border-radius: 16px;
+      background:
+        radial-gradient(120% 80% at 80% 0%, #3a4118 0%, transparent 55%),
+        var(--surface-2);
       display: grid;
       place-items: center;
-      background: #d9d9d9;
       text-align: center;
+      padding: 24px;
+    }
+    .review {
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 14px 16px;
+      display: grid;
+      gap: 8px;
+    }
+    .form {
+      display: grid;
+      gap: 10px;
+      background: var(--surface);
+      border-radius: 16px;
       padding: 16px;
     }
-    .row { display: flex; gap: 8px; padding: 8px; align-items: center; background: #fff; }
-    .grow { flex: 1; }
-    .form { padding: 12px; display: grid; gap: 8px; background: #fff; }
-    .form .line { height: 32px; border: 1px solid #111; background: #f7f7f7; padding: 6px 8px; }
-    .stars { letter-spacing: 4px; }
-    .note { padding: 8px 12px; background: #eee; }
+    .line, .stars {
+      min-height: 44px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      color: var(--muted);
+    }
+    .stars { gap: 6px; padding: 6px; }
+    .stars button {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: transparent;
+      color: var(--accent);
+    }
+    .check { display: flex; gap: 8px; align-items: center; min-height: 40px; }
+    .note {
+      margin: 0;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: #2a2618;
+      color: var(--text);
+    }
+    .empty {
+      margin: 0;
+      padding: 18px;
+      border-radius: 12px;
+      background: var(--surface);
+      color: var(--text);
+    }
     .split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .block { background: var(--surface); border-radius: 12px; padding: 14px; display: grid; gap: 8px; }
+    .crumb a { color: var(--accent); }
     textarea[data-screen] {
       width: 100%;
-      margin-top: 8px;
-      min-height: 64px;
-      border: 1px dashed #111;
-      padding: 8px;
+      margin-top: 10px;
+      min-height: 72px;
+      border-radius: 12px;
+      border: 1px dashed var(--line);
+      padding: 10px 12px;
       font: inherit;
-      background: #fff;
+      color: var(--text);
+      background: #161710;
     }
+    .picked { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
+    [data-id].is-selected { outline: 2px solid var(--accent); outline-offset: 2px; }
     #copy {
       position: fixed;
       right: 16px;
       bottom: 16px;
-      background: #111;
-      color: #fff;
+      background: var(--accent);
+      color: var(--ink);
       border: 0;
-      padding: 10px 14px;
+      border-radius: 999px;
+      padding: 12px 16px;
       font: inherit;
+      font-weight: 700;
       cursor: pointer;
     }
-    #copy-status { margin-left: 8px; font-size: 13px; }
-    @media (max-width: 700px) {
+    #copy-status { font-weight: 500; }
+    @media (max-width: 720px) {
       .grid, .split { grid-template-columns: 1fr; }
+      h3 { font-size: 26px; }
+      .float-bar { gap: 12px; flex-wrap: wrap; }
     }
   </style>
 </head>
 <body>
+  <header class="float-bar">
+    <a class="brand" href="#directory" data-id="nav-brand"><i></i>Panel Club</a>
+    <a href="#directory" data-id="nav-discover" data-section="discover">Discover</a>
+    <a href="#upcoming-empty" data-id="nav-upcoming" data-section="upcoming">Upcoming</a>
+    <a href="#people" data-id="nav-people" data-section="people">People</a>
+    <a href="#library" data-id="nav-library" data-section="library">Library</a>
+  </header>
   <nav class="jump" aria-label="Screens">
     <a href="#directory">Directory</a>
     <a href="#show">Show</a>
     <a href="#episode">Episode</a>
-    <a href="#episode-cast">Episode with Cast</a>
+    <a href="#episode-cast">Cast</a>
     <a href="#upcoming">Upcoming</a>
     <a href="#upcoming-empty">Upcoming empty</a>
+    <a href="#people">People</a>
     <a href="#person">Person</a>
     <a href="#library">Library</a>
     <a href="#library-empty">Library empty</a>
@@ -117,44 +261,44 @@
     <a href="#not-found">Not found</a>
   </nav>
   <main>
-    <section class="screen" id="directory">
-      <h2>Directory</h2>
+    <section class="screen is-on" id="directory">
+      <div class="chrome">
+        <h2>Directory</h2>
+        <label class="approve"><input type="checkbox" data-approve="directory" /> Approved</label>
+      </div>
       <div class="frame">
-        <header class="bar">
-          <strong>Panel Club</strong>
-          <a href="#directory" aria-current="page">Discover</a>
-          <a href="#upcoming">Upcoming</a>
-          <a href="#person">People</a>
-          <a href="#library">Library</a>
-        </header>
         <div class="pad">
-          <h3>Find your kind of funny</h3>
-          <p class="meta">16 shows. Search, then open a show.</p>
-          <div class="row"><span class="grow">Search shows, hosts, guests or episodes</span></div>
+          <div>
+            <h3>Find your kind of funny</h3>
+            <p class="meta">16 shows. Search, then open a show.</p>
+          </div>
+          <div class="search" data-id="directory-search" role="search">
+            <span>Search shows, hosts, guests or episodes</span>
+          </div>
           <div class="filters" aria-label="Categories">
-            <span class="on">All shows</span>
-            <span>Panel shows</span>
-            <span>Game shows</span>
-            <span>Roasts</span>
-            <span>Advice &amp; banter</span>
+            <button class="chip on" type="button" data-id="directory-filter-all">All shows</button>
+            <button class="chip" type="button" data-id="directory-filter-panel">Panel shows</button>
+            <button class="chip" type="button" data-id="directory-filter-game">Game shows</button>
+            <button class="chip" type="button" data-id="directory-filter-roasts">Roasts</button>
+            <button class="chip" type="button" data-id="directory-filter-advice">Advice &amp; banter</button>
           </div>
           <div class="grid">
-            <a class="card" href="#show">
+            <a class="card" href="#show" data-id="directory-card-igl">
               <h4>India's Got Latent</h4>
               <p class="meta">Samay Raina · Panel shows</p>
-              <p class="meta">7 episodes · 4.6</p>
+              <p class="meta">7 episodes · <span class="score">4.6</span></p>
             </a>
-            <a class="card" href="#show">
+            <a class="card" href="#show" data-id="directory-card-pgrs">
               <h4>Pretty Good Roast Show</h4>
               <p class="meta">Aashish Solanki · Roasts</p>
               <p class="meta">6 episodes · No score yet</p>
             </a>
-            <a class="card" href="#show">
+            <a class="card" href="#show" data-id="directory-card-relationshit">
               <h4>Relationshit Advice</h4>
               <p class="meta">Raunaq Rajani · Advice &amp; banter</p>
-              <p class="meta">111 episodes · 4.2</p>
+              <p class="meta">111 episodes · <span class="score">4.2</span></p>
             </a>
-            <a class="card" href="#show">
+            <a class="card" href="#show" data-id="directory-card-tgfgs">
               <h4>The General Fun Game Show</h4>
               <p class="meta">Kaneez Surka · Game shows</p>
               <p class="meta">19 episodes · No score yet</p>
@@ -162,70 +306,68 @@
           </div>
         </div>
       </div>
-      <textarea data-screen="directory" placeholder="What is wrong on this screen?"></textarea>
+      <p class="picked" data-picked="directory">Selected: none</p>
+      <textarea data-screen="directory" data-target="" placeholder="What is wrong?"></textarea>
     </section>
 
     <section class="screen" id="show">
-      <h2>Show</h2>
+      <div class="chrome">
+        <h2>Show</h2>
+        <label class="approve"><input type="checkbox" data-approve="show" /> Approved</label>
+      </div>
       <div class="frame">
-        <header class="bar">
-          <strong>Panel Club</strong>
-          <a href="#directory">Discover</a>
-          <a href="#upcoming">Upcoming</a>
-          <a href="#person">People</a>
-          <a href="#library">Library</a>
-        </header>
         <div class="pad">
-          <p class="meta"><a href="#directory">Discover</a> / India's Got Latent</p>
+          <p class="meta crumb"><a href="#directory" data-id="show-crumb">Discover</a> / India's Got Latent</p>
           <h3>India's Got Latent</h3>
-          <p class="meta">Hosted by <a href="#person">Samay Raina</a> · Panel shows · 4.6 from 12 reviews</p>
+          <p class="meta">Hosted by <a href="#person" data-id="show-host">Samay Raina</a> · Panel shows · <span class="score">4.6 from 12 reviews</span></p>
           <p class="note">Season 1 is no longer public on the official channel. The cover is Season 2, Episode 1.</p>
-          <a class="ep" href="#episode">
+          <a class="ep" href="#episode" data-id="show-ep-s2e1">
             <strong>S2 EP1 ft. Alia Bhatt, Sharvari, Ashish Solanki</strong>
-            <p class="meta">59 min · 4.8 · Aired</p>
+            <p class="meta">59 min · <span class="score">4.8</span> · Aired</p>
           </a>
-          <a class="ep" href="#episode">
+          <a class="ep" href="#episode" data-id="show-ep-s2e2">
             <strong>S2 EP2 ft. Harssh Limbachiya, Kiku Sharda, Chandan Prabhakar</strong>
             <p class="meta">61 min · No score yet · Aired</p>
           </a>
-          <a class="ep" href="#episode-cast">
+          <a class="ep" href="#episode-cast" data-id="show-ep-file">
             <strong>Example file episode</strong>
             <p class="meta">Has a media file · Cast available on the player</p>
           </a>
         </div>
       </div>
-      <textarea data-screen="show" placeholder="What is wrong on this screen?"></textarea>
+      <p class="picked" data-picked="show">Selected: none</p>
+      <textarea data-screen="show" data-target="" placeholder="What is wrong?"></textarea>
     </section>
 
     <section class="screen" id="episode">
-      <h2>Episode · YouTube, Cast hidden</h2>
+      <div class="chrome">
+        <h2>Episode · YouTube, Cast hidden</h2>
+        <label class="approve"><input type="checkbox" data-approve="episode" /> Approved</label>
+      </div>
       <div class="frame">
-        <header class="bar">
-          <strong>Panel Club</strong>
-          <a href="#directory">Discover</a>
-          <a href="#upcoming">Upcoming</a>
-          <a href="#person">People</a>
-          <a href="#library">Library</a>
-        </header>
         <div class="pad">
-          <p class="meta"><a href="#show">India's Got Latent</a> / S2 EP1</p>
+          <p class="meta crumb"><a href="#show" data-id="episode-crumb">India's Got Latent</a> / S2 EP1</p>
           <h3>S2 EP1 ft. Alia Bhatt, Sharvari, Ashish Solanki</h3>
-          <p class="meta">59 min · Aired · 4.8 from 3 reviews</p>
-          <div class="player">
+          <p class="meta">59 min · Aired · <span class="score">4.8 from 3 reviews</span></p>
+          <div class="player" data-id="episode-player">
             <div>
               <strong>Playing on this page</strong>
               <p class="meta">YouTube embed. No Cast button.</p>
             </div>
           </div>
           <div class="row">
-            <span>Save</span>
-            <span>Mark finished</span>
+            <button class="btn" type="button" data-id="episode-save">Save</button>
+            <button class="btn" type="button" data-id="episode-finished">Mark finished</button>
           </div>
-          <p class="meta">Guests: <a href="#person">Alia Bhatt</a>, <a href="#person">Sharvari</a>, <a href="#person">Ashish Solanki</a></p>
+          <p class="meta">Guests:
+            <a href="#person" data-id="episode-guest-alia">Alia Bhatt</a>,
+            <a href="#person" data-id="episode-guest-sharvari">Sharvari</a>,
+            <a href="#person" data-id="episode-guest-ashish">Ashish Solanki</a>
+          </p>
           <article class="review">
             <strong>Aisha · 5 stars · Spoiler</strong>
             <p class="meta">The review body is hidden.</p>
-            <span class="pill">Show spoiler</span>
+            <button class="btn" type="button" data-id="episode-show-spoiler">Show spoiler</button>
           </article>
           <article class="review">
             <strong>Rohan · 4 stars</strong>
@@ -233,225 +375,303 @@
           </article>
           <form class="form" action="#episode">
             <strong>Your review replaces the last one from this browser</strong>
-            <div class="line">Display name</div>
-            <div class="stars">1 2 3 4 5</div>
-            <label><input type="checkbox" /> This review spoils the episode</label>
-            <div class="line">Review</div>
-            <div class="row"><span>Submit review</span></div>
+            <div class="line" data-id="episode-name">Display name</div>
+            <div class="stars" aria-label="Stars">
+              <button type="button" data-id="episode-star-1">1</button>
+              <button type="button" data-id="episode-star-2">2</button>
+              <button type="button" data-id="episode-star-3">3</button>
+              <button type="button" data-id="episode-star-4">4</button>
+              <button type="button" data-id="episode-star-5">5</button>
+            </div>
+            <label class="check"><input type="checkbox" data-id="episode-spoiler-flag" /> This review spoils the episode</label>
+            <div class="line" data-id="episode-body">Review</div>
+            <button class="btn primary" type="submit" data-id="episode-submit">Submit review</button>
           </form>
         </div>
       </div>
-      <textarea data-screen="episode" placeholder="What is wrong on this screen?"></textarea>
+      <p class="picked" data-picked="episode">Selected: none</p>
+      <textarea data-screen="episode" data-target="" placeholder="What is wrong?"></textarea>
     </section>
 
     <section class="screen" id="episode-cast">
-      <h2>Episode · media file, Cast shown</h2>
+      <div class="chrome">
+        <h2>Episode · media file, Cast shown</h2>
+        <label class="approve"><input type="checkbox" data-approve="episode-cast" /> Approved</label>
+      </div>
       <div class="frame">
-        <header class="bar">
-          <strong>Panel Club</strong>
-          <a href="#directory">Discover</a>
-          <a href="#upcoming">Upcoming</a>
-          <a href="#person">People</a>
-          <a href="#library">Library</a>
-        </header>
         <div class="pad">
-          <p class="meta"><a href="#show">India's Got Latent</a> / Example file episode</p>
+          <p class="meta crumb"><a href="#show" data-id="cast-crumb">India's Got Latent</a> / Example file episode</p>
           <h3>Example file episode</h3>
           <p class="meta">Not in the YouTube seed. Shown only so Cast has a place.</p>
           <div class="player">
             <div>
               <strong>Playing on this page</strong>
               <p class="meta">Video file. A TV is available.</p>
-              <span class="pill">Cast</span>
+              <button class="btn primary" type="button" data-id="cast-prompt">Cast</button>
             </div>
           </div>
           <p class="note">Cast opens the device picker. Play and pause stay on this page.</p>
         </div>
       </div>
-      <textarea data-screen="episode-cast" placeholder="What is wrong on this screen?"></textarea>
+      <p class="picked" data-picked="episode-cast">Selected: none</p>
+      <textarea data-screen="episode-cast" data-target="" placeholder="What is wrong?"></textarea>
     </section>
 
     <section class="screen" id="upcoming">
-      <h2>Upcoming</h2>
+      <div class="chrome">
+        <h2>Upcoming · dated example</h2>
+        <label class="approve"><input type="checkbox" data-approve="upcoming" /> Approved</label>
+      </div>
       <div class="frame">
-        <header class="bar">
-          <strong>Panel Club</strong>
-          <a href="#directory">Discover</a>
-          <a href="#upcoming" aria-current="page">Upcoming</a>
-          <a href="#person">People</a>
-          <a href="#library">Library</a>
-        </header>
         <div class="pad">
           <h3>Upcoming</h3>
-          <a class="ep" href="#episode">
+          <a class="ep" href="#episode" data-id="upcoming-premiere">
             <strong>Lie Hard · S4 EP1</strong>
             <p class="meta">Gaurav Kapoor · Premieres 4 Oct 2026</p>
             <p class="meta">Example row. The seed has no upcoming episode yet.</p>
           </a>
-          <h3>Aired</h3>
-          <a class="ep" href="#show"><strong>India's Got Latent</strong><p class="meta">7 episodes · Samay Raina</p></a>
-          <a class="ep" href="#show"><strong>Pretty Good Roast Show</strong><p class="meta">6 episodes · Aashish Solanki</p></a>
-          <a class="ep" href="#show"><strong>Lie Hard</strong><p class="meta">19 episodes · Gaurav Kapoor</p></a>
+          <h4>Aired</h4>
+          <a class="ep" href="#show" data-id="upcoming-aired-igl"><strong>India's Got Latent</strong><p class="meta">7 episodes · Samay Raina</p></a>
+          <a class="ep" href="#show" data-id="upcoming-aired-pgrs"><strong>Pretty Good Roast Show</strong><p class="meta">6 episodes · Aashish Solanki</p></a>
+          <a class="ep" href="#show" data-id="upcoming-aired-lie"><strong>Lie Hard</strong><p class="meta">19 episodes · Gaurav Kapoor</p></a>
         </div>
       </div>
-      <textarea data-screen="upcoming" placeholder="What is wrong on this screen?"></textarea>
+      <p class="picked" data-picked="upcoming">Selected: none</p>
+      <textarea data-screen="upcoming" data-target="" placeholder="What is wrong?"></textarea>
     </section>
 
     <section class="screen" id="upcoming-empty">
-      <h2>Upcoming · nothing announced</h2>
+      <div class="chrome">
+        <h2>Upcoming · nothing announced</h2>
+        <label class="approve"><input type="checkbox" data-approve="upcoming-empty" /> Approved</label>
+      </div>
       <div class="frame">
-        <header class="bar">
-          <strong>Panel Club</strong>
-          <a href="#directory">Discover</a>
-          <a href="#upcoming" aria-current="page">Upcoming</a>
-          <a href="#person">People</a>
-          <a href="#library">Library</a>
-        </header>
         <div class="pad">
           <h3>Upcoming</h3>
-          <p class="empty note">Nothing announced. New tapings show up here with a date.</p>
-          <h3>Aired</h3>
-          <a class="ep" href="#show"><strong>India's Got Latent</strong><p class="meta">7 episodes · Samay Raina</p></a>
+          <p class="empty">Nothing announced. New tapings show up here with a date.</p>
+          <h4>Aired</h4>
+          <a class="ep" href="#show" data-id="upcoming-empty-aired-igl"><strong>India's Got Latent</strong><p class="meta">7 episodes · Samay Raina</p></a>
         </div>
       </div>
-      <textarea data-screen="upcoming-empty" placeholder="What is wrong on this screen?"></textarea>
+      <p class="picked" data-picked="upcoming-empty">Selected: none</p>
+      <textarea data-screen="upcoming-empty" data-target="" placeholder="What is wrong?"></textarea>
+    </section>
+
+    <section class="screen" id="people">
+      <div class="chrome">
+        <h2>People</h2>
+        <label class="approve"><input type="checkbox" data-approve="people" /> Approved</label>
+      </div>
+      <div class="frame">
+        <div class="pad">
+          <div>
+            <h3>People</h3>
+            <p class="meta">Hosts and guests across the 16 shows.</p>
+          </div>
+          <a class="person-link" href="#person" data-id="people-kaustubh"><strong>Kaustubh Agarwal</strong><p class="meta">Hosts Akal ke Ghode, Loose Emotions</p></a>
+          <a class="person-link" href="#person" data-id="people-samay"><strong>Samay Raina</strong><p class="meta">Hosts India's Got Latent</p></a>
+          <a class="person-link" href="#person" data-id="people-aashish"><strong>Aashish Solanki</strong><p class="meta">Hosts Pretty Good Roast Show</p></a>
+        </div>
+      </div>
+      <p class="picked" data-picked="people">Selected: none</p>
+      <textarea data-screen="people" data-target="" placeholder="What is wrong?"></textarea>
     </section>
 
     <section class="screen" id="person">
-      <h2>Person</h2>
+      <div class="chrome">
+        <h2>Person</h2>
+        <label class="approve"><input type="checkbox" data-approve="person" /> Approved</label>
+      </div>
       <div class="frame">
-        <header class="bar">
-          <strong>Panel Club</strong>
-          <a href="#directory">Discover</a>
-          <a href="#upcoming">Upcoming</a>
-          <a href="#person" aria-current="page">People</a>
-          <a href="#library">Library</a>
-        </header>
         <div class="pad">
-          <p class="meta"><a href="#directory">People</a> / Kaustubh Agarwal</p>
+          <p class="meta crumb"><a href="#people" data-id="person-crumb">People</a> / Kaustubh Agarwal</p>
           <h3>Kaustubh Agarwal</h3>
           <div class="split">
-            <div class="person-block">
+            <div class="block">
               <strong>Hosts</strong>
-              <p class="meta"><a href="#show">Akal ke Ghode</a> · 13 episodes</p>
-              <p class="meta"><a href="#show">Loose Emotions</a> · with Vidit Sharma · 17 episodes</p>
+              <a href="#show" data-id="person-host-akal">Akal ke Ghode · 13 episodes</a>
+              <a href="#show" data-id="person-host-loose">Loose Emotions · with Vidit Sharma · 17 episodes</a>
             </div>
-            <div class="person-block">
+            <div class="block">
               <strong>Guest</strong>
-              <p class="meta"><a href="#episode">India's Got Latent · S2 EP7</a></p>
-              <p class="meta"><a href="#episode">Judge Me If You Can · Ep 01</a></p>
+              <a href="#episode" data-id="person-guest-igl">India's Got Latent · S2 EP7</a>
+              <a href="#episode" data-id="person-guest-judge">Judge Me If You Can · Ep 01</a>
             </div>
           </div>
         </div>
       </div>
-      <textarea data-screen="person" placeholder="What is wrong on this screen?"></textarea>
+      <p class="picked" data-picked="person">Selected: none</p>
+      <textarea data-screen="person" data-target="" placeholder="What is wrong?"></textarea>
     </section>
 
     <section class="screen" id="library">
-      <h2>Library</h2>
+      <div class="chrome">
+        <h2>Library</h2>
+        <label class="approve"><input type="checkbox" data-approve="library" /> Approved</label>
+      </div>
       <div class="frame">
-        <header class="bar">
-          <strong>Panel Club</strong>
-          <a href="#directory">Discover</a>
-          <a href="#upcoming">Upcoming</a>
-          <a href="#person">People</a>
-          <a href="#library" aria-current="page">Library</a>
-        </header>
         <div class="pad">
-          <h3>Your library</h3>
-          <p class="meta">Stored in this browser. Not an account.</p>
+          <div>
+            <h3>Your library</h3>
+            <p class="meta">Stored in this browser. Not an account.</p>
+          </div>
           <h4>Continue</h4>
-          <a class="ep" href="#episode">
+          <a class="ep" href="#episode" data-id="library-continue">
             <strong>India's Got Latent · S2 EP1</strong>
             <p class="meta">12 min in · not finished</p>
           </a>
           <h4>History</h4>
-          <a class="ep" href="#episode">
+          <a class="ep" href="#episode" data-id="library-history">
             <strong>Pretty Good Roast Show · S1 EP1</strong>
             <p class="meta">Finished</p>
           </a>
           <h4>Watchlist</h4>
-          <a class="ep" href="#episode">
+          <a class="ep" href="#episode" data-id="library-saved">
             <strong>Lie Hard · Ep 1</strong>
             <p class="meta">Saved</p>
           </a>
         </div>
       </div>
-      <textarea data-screen="library" placeholder="What is wrong on this screen?"></textarea>
+      <p class="picked" data-picked="library">Selected: none</p>
+      <textarea data-screen="library" data-target="" placeholder="What is wrong?"></textarea>
     </section>
 
     <section class="screen" id="library-empty">
-      <h2>Library · empty</h2>
+      <div class="chrome">
+        <h2>Library · empty</h2>
+        <label class="approve"><input type="checkbox" data-approve="library-empty" /> Approved</label>
+      </div>
       <div class="frame">
-        <header class="bar">
-          <strong>Panel Club</strong>
-          <a href="#directory">Discover</a>
-          <a href="#upcoming">Upcoming</a>
-          <a href="#person">People</a>
-          <a href="#library" aria-current="page">Library</a>
-        </header>
         <div class="pad">
           <h3>Your library</h3>
-          <p class="empty note">Nothing in progress. You have not saved an episode. Open a show from Discover.</p>
-          <p><a href="#directory">Discover shows</a></p>
+          <p class="empty">Nothing in progress. You have not saved an episode.</p>
+          <a class="btn primary" href="#directory" data-id="library-empty-discover">Discover shows</a>
         </div>
       </div>
-      <textarea data-screen="library-empty" placeholder="What is wrong on this screen?"></textarea>
+      <p class="picked" data-picked="library-empty">Selected: none</p>
+      <textarea data-screen="library-empty" data-target="" placeholder="What is wrong?"></textarea>
     </section>
 
     <section class="screen" id="search-empty">
-      <h2>Directory · no matches</h2>
+      <div class="chrome">
+        <h2>Directory · no matches</h2>
+        <label class="approve"><input type="checkbox" data-approve="search-empty" /> Approved</label>
+      </div>
       <div class="frame">
-        <header class="bar">
-          <strong>Panel Club</strong>
-          <a href="#directory" aria-current="page">Discover</a>
-          <a href="#upcoming">Upcoming</a>
-          <a href="#person">People</a>
-          <a href="#library">Library</a>
-        </header>
         <div class="pad">
           <h3>Find your kind of funny</h3>
-          <div class="row"><span class="grow">xyz</span><span>Clear</span></div>
-          <div class="filters">
-            <span class="on">All shows</span>
-            <span>Panel shows</span>
-            <span>Game shows</span>
-            <span>Roasts</span>
-            <span>Advice &amp; banter</span>
+          <div class="search">
+            <span>xyz</span>
+            <button class="btn primary" type="button" data-id="search-empty-clear">Clear</button>
           </div>
-          <p class="empty note">No shows match “xyz”.</p>
+          <div class="filters">
+            <button class="chip on" type="button" data-id="search-empty-filter-all">All shows</button>
+            <button class="chip" type="button" data-id="search-empty-filter-panel">Panel shows</button>
+            <button class="chip" type="button" data-id="search-empty-filter-game">Game shows</button>
+            <button class="chip" type="button" data-id="search-empty-filter-roasts">Roasts</button>
+            <button class="chip" type="button" data-id="search-empty-filter-advice">Advice &amp; banter</button>
+          </div>
+          <p class="empty">No shows match “xyz”.</p>
         </div>
       </div>
-      <textarea data-screen="search-empty" placeholder="What is wrong on this screen?"></textarea>
+      <p class="picked" data-picked="search-empty">Selected: none</p>
+      <textarea data-screen="search-empty" data-target="" placeholder="What is wrong?"></textarea>
     </section>
 
     <section class="screen" id="not-found">
-      <h2>Not found</h2>
+      <div class="chrome">
+        <h2>Not found</h2>
+        <label class="approve"><input type="checkbox" data-approve="not-found" /> Approved</label>
+      </div>
       <div class="frame">
-        <header class="bar">
-          <strong>Panel Club</strong>
-          <a href="#directory">Discover</a>
-          <a href="#upcoming">Upcoming</a>
-          <a href="#person">People</a>
-          <a href="#library">Library</a>
-        </header>
         <div class="pad">
           <h3>That show or episode is not in the catalog.</h3>
           <p class="meta">The link may be old, or the episode was removed from the public list.</p>
-          <p><a href="#directory">Back to Discover</a></p>
+          <a class="btn primary" href="#directory" data-id="not-found-back">Back to Discover</a>
         </div>
       </div>
-      <textarea data-screen="not-found" placeholder="What is wrong on this screen?"></textarea>
+      <p class="picked" data-picked="not-found">Selected: none</p>
+      <textarea data-screen="not-found" data-target="" placeholder="What is wrong?"></textarea>
     </section>
   </main>
   <button id="copy" type="button">Copy feedback <span id="copy-status"></span></button>
   <script>
+    var sectionOf = {
+      directory: "discover",
+      show: "discover",
+      episode: "discover",
+      "episode-cast": "discover",
+      "search-empty": "discover",
+      "not-found": "discover",
+      upcoming: "upcoming",
+      "upcoming-empty": "upcoming",
+      people: "people",
+      person: "people",
+      library: "library",
+      "library-empty": "library"
+    };
+
+    function showScreen(id) {
+      var screen = document.getElementById(id);
+      if (!screen) return;
+      document.querySelectorAll(".screen").forEach(function (node) {
+        node.classList.toggle("is-on", node.id === id);
+      });
+      var section = sectionOf[id];
+      document.querySelectorAll(".float-bar a[data-section]").forEach(function (link) {
+        if (link.getAttribute("data-section") === section) link.setAttribute("aria-current", "page");
+        else link.removeAttribute("aria-current");
+      });
+      window.scrollTo(0, 0);
+    }
+
+    document.querySelectorAll("[data-id]").forEach(function (control) {
+      control.addEventListener("click", function () {
+        if (control.closest(".float-bar")) return;
+        var screen = control.closest(".screen") || document.querySelector(".screen.is-on");
+        if (screen) {
+          screen.querySelectorAll("[data-id].is-selected").forEach(function (node) {
+            node.classList.remove("is-selected");
+          });
+          control.classList.add("is-selected");
+          var cid = control.getAttribute("data-id");
+          var box = screen.querySelector("textarea[data-screen]");
+          if (box) box.setAttribute("data-target", cid);
+          var picked = screen.querySelector("[data-picked]");
+          if (picked) picked.textContent = "Selected: " + cid;
+        }
+      });
+    });
+
+    document.querySelectorAll('a[href^="#"]').forEach(function (link) {
+      link.addEventListener("click", function (event) {
+        var id = link.getAttribute("href").slice(1);
+        if (!document.getElementById(id)) return;
+        event.preventDefault();
+        showScreen(id);
+        if (!link.closest(".float-bar")) return;
+        var screen = document.getElementById(id);
+        var cid = link.getAttribute("data-id");
+        var box = screen.querySelector("textarea[data-screen]");
+        if (box) box.setAttribute("data-target", cid);
+        var picked = screen.querySelector("[data-picked]");
+        if (picked) picked.textContent = "Selected: " + cid;
+        link.classList.add("is-selected");
+      });
+    });
+
+    showScreen("directory");
+
     document.getElementById("copy").addEventListener("click", async function () {
       var parts = [];
       document.querySelectorAll("textarea[data-screen]").forEach(function (box) {
         var text = box.value.trim();
         if (!text) return;
-        parts.push("## " + box.getAttribute("data-screen") + "\n\n" + text);
+        var id = box.getAttribute("data-screen");
+        var target = box.getAttribute("data-target") || "";
+        var approve = document.querySelector('[data-approve="' + id + '"]');
+        var approved = approve && approve.checked ? "yes" : "no";
+        parts.push("## " + id + "\n\ntarget: " + target + "\napproved: " + approved + "\n\n" + text);
       });
       var status = document.getElementById("copy-status");
       if (!parts.length) {

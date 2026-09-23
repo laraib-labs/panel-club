@@ -39,14 +39,15 @@ Server Components may import `reviews.ts`. Client Components must not. Pass the 
 
 ## Screens
 
-`/design` draws these before any UI slice. Grayscale wireframe, one HTML file:
+Wireframe is approved (`docs/design/panel-platform/`). Implementers follow `spec.md` and do not edit it. One floating app bar: Discover, Upcoming, People, Library. It stays put and replaces the page.
 
-1. Directory — search, four category filters, show cards with score and episode count.
+1. Directory — search, four category filters, show cards with score and episode count. Empty search state.
 2. Show — host, availability note, episode list, score.
-3. Episode — player, Cast control in both states (file available / YouTube-only), review form, existing reviews, spoiler hidden until asked.
-4. Upcoming — dated upcoming list, then the aired archive. Empty upcoming state.
-5. Person — name, episodes they host, episodes they guest.
+3. Episode — player, Cast hidden on YouTube and shown for a file when a device is available, review form, spoiler hidden until asked.
+4. Upcoming — empty state in the seed, plus one dated example row, then the aired archive.
+5. People — list of hosts and guests. Person — episodes they host, episodes they guest.
 6. Library — continue, history, watchlist. Empty state.
+7. Not found — unknown show or episode id.
 
 ## Slices
 
@@ -54,17 +55,17 @@ Disjoint files. An edge exists only where a later slice imports a file an earlie
 
 | Slice | Owns | Blocked by | Test |
 | --- | --- | --- | --- |
-| Wireframe | `docs/design/panel-platform/wireframe.html`, `docs/design/panel-platform/notes.md` | — | `test -f` both files |
+| Wireframe | `docs/design/panel-platform/wireframe.html`, `docs/design/panel-platform/notes.md`, `docs/design/panel-platform/spec.md` | — | `test -f` all three |
 | Catalog | `content/catalog.json`, `src/lib/catalog.ts`, `src/lib/catalog.test.ts` | — | `node --experimental-strip-types --test src/lib/catalog.test.ts` |
 | Reviews | `src/lib/reviews.ts`, `src/lib/reviews.test.ts` | Catalog | `node --experimental-strip-types --test src/lib/reviews.test.ts` |
 | Library | `src/lib/library.ts`, `src/lib/library.test.ts` | — | `node --experimental-strip-types --test src/lib/library.test.ts` |
-| Directory | `package.json`, `tsconfig.json`, `next.config.ts`, `src/app/layout.tsx`, `src/app/globals.css`, `src/app/page.tsx`, `src/app/shows/[slug]/page.tsx`, `src/components/site-header.tsx`, `src/components/show-card.tsx`, `src/components/directory.tsx`, `src/lib/filters.ts`, `src/lib/filters.test.ts` | Wireframe, Catalog, Reviews | `node --experimental-strip-types --test src/lib/filters.test.ts` |
+| Directory | `package.json`, `tsconfig.json`, `next.config.ts`, `src/app/layout.tsx`, `src/app/globals.css`, `src/app/page.tsx`, `src/app/not-found.tsx`, `src/app/shows/[slug]/page.tsx`, `src/components/site-header.tsx`, `src/components/show-card.tsx`, `src/components/directory.tsx`, `src/lib/filters.ts`, `src/lib/filters.test.ts` | Wireframe, Catalog, Reviews | `node --experimental-strip-types --test src/lib/filters.test.ts` |
 | Schedule | `src/lib/schedule.ts`, `src/lib/schedule.test.ts`, `src/app/upcoming/page.tsx`, `src/components/schedule.tsx` | Wireframe, Catalog | `node --experimental-strip-types --test src/lib/schedule.test.ts` |
 | People | `src/lib/people.ts`, `src/lib/people.test.ts`, `src/app/people/page.tsx`, `src/app/people/[slug]/page.tsx` | Wireframe, Catalog | `node --experimental-strip-types --test src/lib/people.test.ts` |
 | Episode | `src/lib/cast.ts`, `src/lib/cast.test.ts`, `src/components/player.tsx`, `src/components/cast-button.tsx`, `src/components/review-form.tsx`, `src/app/shows/[slug]/episodes/[id]/page.tsx` | Wireframe, Catalog, Reviews, Library | `node --experimental-strip-types --test src/lib/cast.test.ts` |
 | Library page | `src/lib/library-view.ts`, `src/lib/library-view.test.ts`, `src/app/library/page.tsx`, `src/components/library-list.tsx` | Wireframe, Library | `node --experimental-strip-types --test src/lib/library-view.test.ts` |
 
-Header links (Discover, Upcoming, People, Library) are written only in `site-header.tsx`. Other slices add routes and do not edit the header or `package.json`.
+Header links (Discover, Upcoming, People, Library) are written only in `site-header.tsx`. The bar is fixed and switches the route. Other slices add routes and do not edit the header, `package.json`, or `spec.md`. Every UI slice lists `docs/design/panel-platform/spec.md` so the implementer can read it. That shared path means `/go` keeps one UI slice per wave.
 
 ### Symbols
 
@@ -73,7 +74,7 @@ Header links (Discover, Upcoming, People, Library) are written only in `site-hea
 - Library: `recordWatch`, `markFinished`, `toggleSave`, `listLibrary`. Storage is an argument (Map in tests, `localStorage` in the client).
 - Filters: `filterShows(catalog, { query, category })`.
 - Schedule: `splitSchedule` → `{ upcoming, aired }`. Upcoming sorts by `premieresAt`. Missing date is allowed and sorts last.
-- People: `listPeople`, `appearances`. Split `guest` on commas, trim, drop empties. A host who is also a guest is one person.
+- People: `listPeople`, `appearances`. Split `guest` on commas, trim, drop empties. Co-hosts split on ` & `. Do not invent a guest from the title when the field is empty. A host who is also a guest is one person, listed under both hosted and guested appearances.
 - Cast: `castDecision({ kind, deviceAvailable })` → `prompt` or `hidden`.
 - Library view: `groupLibrary` → continue (started, not finished), history, saved.
 
@@ -87,6 +88,8 @@ Catalog test: 16 shows; categories are only those four; India's Got Latent has 7
 
 - This repo is the product. The Vercel site is a reference, not a codebase to fork.
 - Playback of seeded episodes is the YouTube embed. No stream ripping, no proxy, no Cast SDK app id.
+- The approved wireframe is the UI contract: floating header, labels and navigation from `spec.md`. Do not invent screens listed there as out of scope.
+- A `page.tsx` file exports only the page. A named helper such as `LibraryPage` in that file fails the production typecheck. Keep helpers unexported or move them out of `page.tsx`.
 - Cast control renders only for `mediaUrl` episodes when `watchAvailability` says a device is there. YouTube episodes show no Cast button.
 - Reviews are public and tied to the `pc_viewer` cookie. History does not sync across browsers.
 - `node:sqlite`, not a hosted database. The experimental warning is expected on Node 22.
@@ -102,10 +105,11 @@ Catalog test: 16 shows; categories are only those four; India's Got Latent has 7
 - Remote Playback cannot see a Chromecast from CI, and it cannot cast an iframe. The cast test uses a fake availability flag.
 - `params` must be awaited. Passing the Promise straight into `getShow` returns nothing.
 - UI slices that land before the directory slice have route files and no `package.json` yet. Their test is the node test, not `next build`.
+- `page.tsx` may export only the page component. Named exports in that file fail the Next.js typecheck.
 
 ## Done
 
-- Wireframe exists and a person can click all six screens, including empty upcoming, empty library, and Cast hidden.
+- Wireframe exists and a person can open every screen in `spec.md`, including empty upcoming, empty library, Cast hidden, and not found.
 - Seeded directory matches the 16-show public catalog, with scores once a review exists.
 - An episode plays in the page. A review updates that episode and the show average. A second submit from the same cookie replaces the first.
 - Upcoming renders an empty state today and a dated row when `status` is `upcoming`.
