@@ -18,44 +18,35 @@ export function Schedule({ schedule }: ScheduleProps) {
   const { upcoming, aired } = schedule;
 
   return (
-    <main>
-      <h1>Upcoming</h1>
+    <div className="pad">
+      <h3>Upcoming</h3>
 
-      <section aria-labelledby="upcoming-heading">
-        <h2 id="upcoming-heading">Upcoming</h2>
-        {upcoming.length === 0 ? (
-          <p>Nothing announced.</p>
-        ) : (
-          <ul>
-            {upcoming.map(({ show, episode }) => (
-              <li key={episode.videoId}>
-                <a href={`/shows/${slugFromName(show.name)}/episodes/${episode.videoId}`}>
-                  <strong>{show.name} · {episode.title}</strong>
-                  {episode.premieresAt ? (
-                    <p>{show.host} · Premieres {formatPremiereDate(episode.premieresAt)}</p>
-                  ) : (
-                    <p>{show.host}</p>
-                  )}
-                </a>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      {upcoming.length === 0 ? (
+        <p className="empty">Nothing announced. New tapings show up here with a date.</p>
+      ) : (
+        upcoming.map(({ show, episode }) => (
+          <a
+            className="ep"
+            href={`/shows/${slugFromName(show.name)}/episodes/${episode.videoId}`}
+            key={episode.videoId}
+          >
+            <strong>{show.name} · {episode.title}</strong>
+            {episode.premieresAt ? (
+              <p className="meta">{show.host} · Premieres {formatPremiereDate(episode.premieresAt)}</p>
+            ) : (
+              <p className="meta">{show.host}</p>
+            )}
+          </a>
+        ))
+      )}
 
-      <section aria-labelledby="aired-heading">
-        <h2 id="aired-heading">Aired</h2>
-        <ul>
-          {aired.map(({ show, episodeCount }) => (
-            <li key={show.name}>
-              <a href={`/shows/${slugFromName(show.name)}`}>
-                <strong>{show.name}</strong>
-                <p>{episodeCount} episodes · {show.host}</p>
-              </a>
-            </li>
-          ))}
-        </ul>
-      </section>
-    </main>
+      <h4>Aired</h4>
+      {aired.map(({ show, episodeCount }) => (
+        <a className="ep" href={`/shows/${slugFromName(show.name)}`} key={show.name}>
+          <strong>{show.name}</strong>
+          <p className="meta">{episodeCount} episodes · {show.host}</p>
+        </a>
+      ))}
+    </div>
   );
 }
