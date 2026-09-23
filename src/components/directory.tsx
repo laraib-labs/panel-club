@@ -21,6 +21,8 @@ export function Directory({ catalog, shows }: DirectoryProps) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<ShowCategory>("All shows");
 
+  const emptyLabel = query.trim() || (category !== "All shows" ? category : "");
+
   const filtered = useMemo(() => {
     const matched = filterShows(catalog, { query, category });
     const byName = new Map(shows.map((entry) => [entry.show.name, entry]));
@@ -60,7 +62,19 @@ export function Directory({ catalog, shows }: DirectoryProps) {
       </div>
 
       {filtered.length === 0 ? (
-        <p className="empty note">No shows match</p>
+        <div className="empty">
+          <p className="meta">No shows match “{emptyLabel}”.</p>
+          <button
+            type="button"
+            className="filter-btn"
+            onClick={() => {
+              setQuery("");
+              setCategory("All shows");
+            }}
+          >
+            Clear
+          </button>
+        </div>
       ) : (
         <div className="grid">
           {filtered.map((entry) => (

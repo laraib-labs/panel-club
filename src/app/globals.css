@@ -1,5 +1,6 @@
 :root {
   color-scheme: light;
+  --bar-height: 49px;
 }
 
 * {
@@ -8,6 +9,7 @@
 
 body {
   margin: 0;
+  padding-top: var(--bar-height);
   background: #e6e6e6;
   color: #111;
   font: 15px/1.4 ui-sans-serif, system-ui, sans-serif;
@@ -35,7 +37,15 @@ a {
   border-bottom: 1px solid #111;
 }
 
-.bar strong {
+.float-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+}
+
+.brand {
   margin-right: auto;
 }
 

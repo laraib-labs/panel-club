@@ -73,15 +73,15 @@ export default async function ShowPage({ params }: ShowPageProps) {
 
   return (
     <>
-      <SiteHeader />
+      <SiteHeader current="discover" />
       <div className="pad">
         <p className="meta">
           <Link href="/">Discover</Link> / {show.name}
         </p>
         <h3>{show.name}</h3>
-        <p className="meta">
-          Hosted by {show.host} · {show.category} · {formatShowScore(score.average, score.reviewCount)}
-        </p>
+        <p className="meta">Hosted by {show.host}</p>
+        <p className="meta">{show.category}</p>
+        <p className="meta">{formatShowScore(score.average, score.reviewCount)}</p>
         {show.availabilityNote ? <p className="note">{show.availabilityNote}</p> : null}
         {show.episodes.map((episode) => {
           const episodeScore = averageScore(db, episode.videoId);
