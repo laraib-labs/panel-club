@@ -1,4 +1,5 @@
-import { LibraryBrowser } from "./browser.tsx";
+import { LibraryBrowser } from "../../components/library-list.tsx";
+import { SiteHeader } from "../../components/site-header.tsx";
 import { loadCatalog, slugFromName } from "../../lib/catalog.ts";
 
 export default function Page() {
@@ -12,5 +13,10 @@ export default function Page() {
     }));
   });
 
-  return <LibraryBrowser episodes={episodes} />;
+  return (
+    <>
+      <SiteHeader current="library" />
+      <LibraryBrowser episodes={episodes} />
+    </>
+  );
 }
