@@ -10,6 +10,7 @@ export default function Page() {
       <SiteHeader current="people" />
       <div className="pad">
         <h1>People</h1>
+        <p className="meta">Hosts and guests across the 16 shows.</p>
         <ul>
           {people.map((person) => (
             <li key={person.slug}>
