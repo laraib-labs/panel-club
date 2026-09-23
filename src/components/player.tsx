@@ -39,25 +39,28 @@ export function Player({ episodeId, videoId, mediaUrl, title }: PlayerProps) {
   return (
     <>
       <div className="player">
-        {mediaUrl ? (
-          <>
-            <video
-              ref={videoRef}
-              src={mediaUrl}
-              controls
+        <div>
+          <strong>Playing on this page</strong>
+          {mediaUrl ? (
+            <>
+              <video
+                ref={videoRef}
+                src={mediaUrl}
+                controls
+                title={title}
+                onTimeUpdate={() => handleTimeUpdate(episodeId, videoRef)}
+              />
+              <CastButton videoRef={videoRef} />
+            </>
+          ) : (
+            <iframe
+              src={`https://www.youtube-nocookie.com/embed/${videoId}`}
               title={title}
-              onTimeUpdate={() => handleTimeUpdate(episodeId, videoRef)}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
             />
-            <CastButton videoRef={videoRef} />
-          </>
-        ) : (
-          <iframe
-            src={`https://www.youtube-nocookie.com/embed/${videoId}`}
-            title={title}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          />
-        )}
+          )}
+        </div>
       </div>
       <div className="row">
         <button type="button" onClick={handleSave}>Save</button>

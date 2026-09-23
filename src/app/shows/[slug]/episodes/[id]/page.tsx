@@ -173,9 +173,13 @@ export default async function EpisodePage({
         <a href={`/shows/${slug}`}>{show.name}</a> / {episode.title}
       </p>
       <h1>{episode.title}</h1>
-      <p className="meta">
-        {formatDuration(episode.duration)} · {statusLabel} · {formatScore(score, reviews.length)}
-      </p>
+      {episode.mediaUrl ? (
+        <p className="meta">Not in the YouTube seed. Shown only so Cast has a place.</p>
+      ) : (
+        <p className="meta">
+          {formatDuration(episode.duration)} · {statusLabel} · {formatScore(score, reviews.length)}
+        </p>
+      )}
 
       <Player
         episodeId={id}
@@ -183,6 +187,10 @@ export default async function EpisodePage({
         mediaUrl={episode.mediaUrl}
         title={episode.title}
       />
+
+      {episode.mediaUrl ? (
+        <p className="note">Cast opens the device picker. Play and pause stay on this page.</p>
+      ) : null}
 
       {guests.length > 0 ? (
         <p className="meta">Guests: {guests.join(", ")}</p>
