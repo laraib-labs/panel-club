@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { createBrowserStorage, listLibrary, type LibraryRecord } from "../lib/library.ts";
 import { groupLibrary, isLibraryEmpty } from "../lib/library-view.ts";
+import { youtubeThumbUrl } from "../lib/thumbs.ts";
 
 export type LibraryEpisodeItem = {
   episodeId: string;
@@ -48,9 +49,18 @@ function EpisodeSection({
     <>
       <h4>{heading}</h4>
       {items.map((item) => (
-        <a className="ep" href={item.href} key={item.episodeId}>
-          <strong>{item.title}</strong>
-          <p className="meta">{item.meta}</p>
+        <a className="episode-row" href={item.href} key={item.episodeId}>
+          <div className="episode-row__thumb">
+            <img
+              src={youtubeThumbUrl(item.episodeId)}
+              alt={item.title}
+              className="episode-row__img"
+            />
+          </div>
+          <div className="episode-row__copy">
+            <strong>{item.title}</strong>
+            <p className="meta">{item.meta}</p>
+          </div>
         </a>
       ))}
     </>

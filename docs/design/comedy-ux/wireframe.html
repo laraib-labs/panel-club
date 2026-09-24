@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Panel Club — comedy UX</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0c0b0e;
+      --surface: #17151c;
+      --surface-2: #221e28;
+      --text: #f7f0e8;
+      --muted: #a89aa8;
+      --line: #3a3140;
+      --accent: #ff2d7b;
+      --ink: #1a0810;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding-top: 62px;
+      background: #07060a;
+      color: var(--text);
+      font: 16px/1.45 ui-sans-serif, system-ui, sans-serif;
+    }
+    a { color: inherit; text-decoration: none; }
+    button, .hit { font: inherit; color: inherit; cursor: pointer; }
+    .jump {
+      position: sticky;
+      top: 62px;
+      z-index: 3;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 12px 16px;
+      background: #000;
+      border-bottom: 1px solid var(--line);
+    }
+    .jump a {
+      color: var(--text);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 6px 12px;
+      min-height: 36px;
+      display: inline-flex;
+      align-items: center;
+    }
+    .float-bar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 4;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 18px;
+      align-items: center;
+      padding: 14px 20px;
+      background: rgba(12, 11, 14, 0.92);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(12px);
+    }
+    .brand { margin-right: auto; font-weight: 800; letter-spacing: -0.03em; }
+    .brand i {
+      display: inline-block;
+      width: 9px; height: 9px;
+      margin-right: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 12px var(--accent);
+    }
+    .float-bar a {
+      color: var(--muted);
+      min-height: 40px;
+      display: inline-flex;
+      align-items: center;
+    }
+    .float-bar a[aria-current="page"] {
+      color: var(--text);
+      box-shadow: inset 0 -2px 0 var(--accent);
+    }
+    main { padding: 20px 16px 120px; }
+    .screen { display: none; max-width: 1080px; margin: 0 auto 48px; }
+    .screen.is-on { display: block; }
+    .chrome {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .chrome h2 {
+      margin: 0;
+      font-size: 12px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .approve { display: flex; gap: 8px; align-items: center; color: var(--accent); font-size: 14px; }
+    .frame {
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      overflow: hidden;
+    }
+    .pad { padding: 22px 20px 28px; display: grid; gap: 16px; }
+    h3 { margin: 0; font-size: 34px; letter-spacing: -0.04em; line-height: 1.08; }
+    h4 {
+      margin: 8px 0 0;
+      font-size: 12px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .meta { margin: 0; color: var(--muted); }
+    .search {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 4px 8px 4px 16px;
+      min-height: 48px;
+    }
+    .search span { flex: 1; color: var(--muted); }
+    .filters { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip, .btn {
+      border: 1px solid var(--line);
+      background: var(--surface);
+      border-radius: 999px;
+      padding: 8px 14px;
+      min-height: 40px;
+    }
+    .chip.on, .btn.primary {
+      background: var(--accent);
+      color: var(--ink);
+      border-color: var(--accent);
+      font-weight: 700;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px;
+    }
+    .card, .ep, .person, .review {
+      display: grid;
+      gap: 8px;
+      text-align: left;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      overflow: hidden;
+      color: inherit;
+    }
+    .card { padding: 0 0 14px; }
+    .card .meta, .card h4 { padding: 0 14px; }
+    .card h4 {
+      margin: 10px 0 0;
+      font-size: 17px;
+      letter-spacing: -0.02em;
+      text-transform: none;
+      color: var(--text);
+    }
+    .thumb {
+      position: relative;
+      aspect-ratio: 16 / 9;
+      background: #1a1520 center / cover no-repeat;
+    }
+    .badge {
+      position: absolute;
+      right: 8px;
+      bottom: 8px;
+      background: rgba(0,0,0,.72);
+      color: var(--text);
+      font-size: 12px;
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+    .score {
+      position: absolute;
+      left: 8px;
+      top: 8px;
+      background: var(--accent);
+      color: var(--ink);
+      font-size: 12px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 6px;
+    }
+    .ep {
+      grid-template-columns: 160px 1fr;
+      align-items: center;
+      padding: 0;
+      gap: 0;
+    }
+    .ep .thumb { border-radius: 0; }
+    .ep .copy { padding: 12px 14px; }
+    .player {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      border-radius: 12px;
+      background: #000 url("https://i.ytimg.com/vi/eHTXQW58WhA/hqdefault.jpg") center / cover;
+      display: grid;
+      place-items: center;
+      position: relative;
+    }
+    .player.dead {
+      background: var(--surface-2);
+    }
+    .play {
+      width: 64px; height: 64px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: var(--ink);
+      display: grid;
+      place-items: center;
+      font-size: 22px;
+      border: 0;
+    }
+    .stars { display: flex; gap: 6px; }
+    .star {
+      width: 40px; height: 40px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: var(--surface-2);
+    }
+    .star.on { background: var(--accent); border-color: var(--accent); color: var(--ink); }
+    .form {
+      display: grid;
+      gap: 10px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 16px;
+    }
+    .form input, .form textarea {
+      font: inherit;
+      color: var(--text);
+      background: var(--surface-2);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+    .review { padding: 14px 16px; }
+    .reply {
+      margin-left: 20px;
+      border-left: 2px solid var(--accent);
+      padding: 10px 12px;
+      background: var(--surface-2);
+      border-radius: 0 12px 12px 0;
+    }
+    .people {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 12px;
+    }
+    .person {
+      grid-template-columns: 48px 1fr;
+      align-items: center;
+      padding: 12px 14px;
+      gap: 12px;
+    }
+    .mono {
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      background: var(--surface-2);
+      color: var(--accent);
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+    }
+    .empty { color: var(--muted); margin: 8px 0; }
+    .row { display: flex; flex-wrap: wrap; gap: 8px; }
+    .is-selected { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .picked { font-size: 13px; color: var(--muted); }
+    textarea[data-screen] {
+      width: 100%;
+      min-height: 72px;
+      margin-top: 8px;
+      background: #111;
+      color: var(--text);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px;
+      font: inherit;
+    }
+    #copy {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      z-index: 5;
+      background: var(--accent);
+      color: var(--ink);
+      border: 0;
+      border-radius: 999px;
+      padding: 12px 18px;
+      font-weight: 800;
+    }
+    .note { font-size: 14px; color: var(--muted); margin: 0; }
+  </style>
+</head>
+<body>
+  <nav class="float-bar" aria-label="App">
+    <a class="brand" href="#directory" data-id="nav-brand" data-section="discover"><i></i>Panel Club</a>
+    <a href="#directory" data-id="nav-discover" data-section="discover">Discover</a>
+    <a href="#upcoming-empty" data-id="nav-upcoming" data-section="upcoming">Upcoming</a>
+    <a href="#people" data-id="nav-people" data-section="people">People</a>
+    <a href="#library" data-id="nav-library" data-section="library">Library</a>
+  </nav>
+  <div class="jump">
+    <a href="#directory">directory</a>
+    <a href="#show">show</a>
+    <a href="#episode">episode</a>
+    <a href="#episode-blocked">episode-blocked</a>
+    <a href="#upcoming">upcoming</a>
+    <a href="#upcoming-empty">upcoming-empty</a>
+    <a href="#people">people</a>
+    <a href="#people-empty">people-empty</a>
+    <a href="#person">person</a>
+    <a href="#library">library</a>
+    <a href="#library-empty">library-empty</a>
+    <a href="#search-empty">search-empty</a>
+    <a href="#not-found">not-found</a>
+  </div>
+  <main>
+    <section class="screen" id="directory">
+      <div class="chrome">
+        <h2>Discover · posters</h2>
+        <label class="approve"><input type="checkbox" data-approve="directory" /> Approved</label>
+      </div>
+      <div class="frame">
+        <div class="pad">
+          <h3>Find your kind of funny</h3>
+          <p class="meta">16 shows. Search, then open a show.</p>
+          <label class="search">
+            <span>Search shows, hosts, guests or episodes</span>
+            <button class="btn" type="button" data-id="directory-search">Search</button>
+          </label>
+          <div class="filters" aria-label="Categories">
+            <button class="chip on" type="button" data-id="directory-filter-all">All shows</button>
+            <button class="chip" type="button" data-id="directory-filter-panel">Panel shows</button>
+            <button class="chip" type="button" data-id="directory-filter-game">Game shows</button>
+            <button class="chip" type="button" data-id="directory-filter-roasts">Roasts</button>
+            <button class="chip" type="button" data-id="directory-filter-advice">Advice &amp; banter</button>
+          </div>
+          <div class="grid">
+            <a class="card" href="#show" data-id="directory-card-igl">
+              <div class="thumb" style="background-image:url('https://i.ytimg.com/vi/eHTXQW58WhA/hqdefault.jpg')"><span class="score">4.6</span></div>
+              <h4>India's Got Latent</h4>
+              <p class="meta">Samay Raina · Panel shows</p>
+              <p class="meta">12 episodes</p>
+            </a>
+            <a class="card" href="#show" data-id="directory-card-truth">
+              <div class="thumb" style="background-image:url('https://i.ytimg.com/vi/U-SuiWkRAlo/hqdefault.jpg')"><span class="score">4.2</span></div>
+              <h4>The Big Picture</h4>
+              <p class="meta">Kusha Kapila · Panel shows</p>
+              <p class="meta">8 episodes</p>
+            </a>
+            <a class="card" href="#show" data-id="directory-card-lie">
+              <div class="thumb" style="background-image:url('https://i.ytimg.com/vi/PAweiRjZl0A/hqdefault.jpg')"></div>
+              <h4>Lie Hard</h4>
+              <p class="meta">Gaurav Kapoor · Game shows</p>
+              <p class="meta">No score yet</p>
+            </a>
+          </div>
+        </div>
+      </div>
+      <p class="picked" data-picked="directory">Selected: none</p>
+      <textarea data-screen="directory" data-target="" placeholder="What is wrong?"></textarea>
+    </section>
+
+    <section class="screen" id="show">
+      <div class="chrome">
+        <h2>Show</h2>
+        <label class="approve"><input type="checkbox" data-approve="show" /> Approved</label>
+      </div>
+      <div class="frame">
+        <div class="pad">
+          <p class="meta"><a href="#directory" data-id="show-back">Discover</a> / India's Got Latent</p>
+          <div class="thumb" style="background-image:url('https://i.ytimg.com/vi/eHTXQW58WhA/hqdefault.jpg'); border-radius:16px;"><span class="score">4.6</span></div>
+          <h3>India's Got Latent</h3>
+          <p class="meta">Hosted by Samay Raina · Panel shows · 4.6 from 12 reviews</p>
+          <p class="note">Season 1 is no longer public on the official channel. The cover is Season 2, Episode 1.</p>
+          <h4>Episodes</h4>
+          <a class="ep" href="#episode" data-id="show-ep-1">
+            <div class="thumb" style="background-image:url('https://i.ytimg.com/vi/eHTXQW58WhA/hqdefault.jpg')"><span class="badge">54 min</span></div>
+            <div class="copy"><strong>S2 EP1</strong><p class="meta">Guests on the panel · 4.8 from 5 reviews</p></div>
+          </a>
+          <a class="ep" href="#episode-blocked" data-id="show-ep-2">
+            <div class="thumb" style="background-image:url('https://i.ytimg.com/vi/eHTXQW58WhA/hqdefault.jpg')"><span class="badge">48 min</span></div>
+            <div class="copy"><strong>S2 EP2</strong><p class="meta">Opens if YouTube blocks the embed · No score yet</p></div>
+          </a>
+        </div>
+      </div>
+      <p class="picked" data-picked="show">Selected: none</p>
+      <textarea data-screen="show" data-target="" placeholder="What is wrong?"></textarea>
+    </section>
+
+    <section class="screen" id="episode">
+      <div class="chrome">
+        <h2>Episode · playing</h2>
+        <label class="approve"><input type="checkbox" data-approve="episode" /> Approved</label>
+      </div>
+      <div class="frame">
+        <div class="pad">
+          <p class="meta"><a href="#show" data-id="episode-back">India's Got Latent</a> / S2 EP1</p>
+          <h3>S2 EP1</h3>
+          <p class="meta">Playing on this page · 54 min · Aired · 4.6 from 12 reviews</p>
+          <div class="player" data-id="episode-stage"><button class="play" type="button" data-id="episode-play" aria-label="Play">▶</button></div>
+          <div class="row">
+            <a class="btn" href="https://www.youtube.com/watch?v=eHTXQW58WhA" data-id="episode-open-yt">Open on YouTube</a>
+            <button class="btn" type="button" data-id="episode-save">Save</button>
+            <button class="btn" type="button" data-id="episode-finished">Mark finished</button>
+          </div>
+          <p class="meta">Guests: Kaustubh Agarwal</p>
+          <article class="review" data-id="episode-review-1">
+            <strong>Asha · ★★★★☆</strong>
+            <p class="meta">Warm, messy, exactly this show.</p>
+            <button class="btn" type="button" data-id="episode-reply-1">Reply</button>
+            <div class="reply"><strong>Dev</strong><p class="meta">The second hour is the one.</p></div>
+          </article>
+          <article class="review" data-id="episode-review-2">
+            <strong>Ria · ★★★★★ · Spoiler</strong>
+            <details>
+              <summary class="chip" data-id="episode-spoiler">Show spoiler</summary>
+              <p class="meta">They bring the guest back at the end.</p>
+            </details>
+          </article>
+          <form class="form">
+            <strong>Your review replaces the last one from this browser</strong>
+            <label>Display name</label>
+            <input type="text" value="Laraib" data-id="episode-name" />
+            <p class="meta">Stars</p>
+            <div class="stars">
+              <button class="star on" type="button" data-id="episode-star-1">★</button>
+              <button class="star on" type="button" data-id="episode-star-2">★</button>
+              <button class="star on" type="button" data-id="episode-star-3">★</button>
+              <button class="star on" type="button" data-id="episode-star-4">★</button>
+              <button class="star" type="button" data-id="episode-star-5">★</button>
+            </div>
+            <label><input type="checkbox" data-id="episode-spoiler-flag" /> This review spoils the episode</label>
+            <textarea rows="3" data-id="episode-body" placeholder="A few sentences"></textarea>
+            <button class="btn primary" type="button" data-id="episode-submit">Submit review</button>
+          </form>
+        </div>
+      </div>
+      <p class="picked" data-picked="episode">Selected: none</p>
+      <textarea data-screen="episode" data-target="" placeholder="What is wrong?"></textarea>
+    </section>
+
+    <section class="screen" id="episode-blocked">
+      <div class="chrome">
+        <h2>Episode · embed blocked</h2>
+        <label class="approve"><input type="checkbox" data-approve="episode-blocked" /> Approved</label>
+      </div>
+      <div class="frame">
+        <div class="pad">
+          <p class="meta"><a href="#show" data-id="blocked-back">India's Got Latent</a> / S2 EP2</p>
+          <h3>S2 EP2</h3>
+          <div class="player dead" data-id="blocked-stage"></div>
+          <p class="meta">This episode won’t play here.</p>
+          <p class="note">YouTube blocked the embed (age gate or embedding off).</p>
+          <div class="row">
+            <a class="btn primary" href="https://www.youtube.com/watch?v=eHTXQW58WhA" data-id="blocked-open-yt">Open on YouTube</a>
+            <button class="btn" type="button" data-id="blocked-save">Save</button>
+            <button class="btn" type="button" data-id="blocked-finished">Mark finished</button>
+          </div>
+        </div>
+      </div>
+      <p class="picked" data-picked="episode-blocked">Selected: none</p>
+      <textarea data-screen="episode-blocked" data-target="" placeholder="What is wrong?"></textarea>
+    </section>
+
+    <section class="screen" id="upcoming">
+      <div class="chrome">
+        <h2>Upcoming · dated</h2>
+        <label class="approve"><input type="checkbox" data-approve="upcoming" /> Approved</label>
+      </div>
+      <div class="frame">
+        <div class="pad">
+          <h3>Upcoming</h3>
+          <a class="ep" href="#episode" data-id="upcoming-premiere">
+            <div class="thumb" style="background-image:url('https://i.ytimg.com/vi/PAweiRjZl0A/hqdefault.jpg')"><span class="badge">4 Oct</span></div>
+            <div class="copy">
+              <strong>Lie Hard · S4 EP1</strong>
+              <p class="meta">Gaurav Kapoor · Premieres 4 Oct 2026</p>
+            </div>
+          </a>
+          <h4>Aired</h4>
+          <a class="ep" href="#show" data-id="upcoming-aired">
+            <div class="thumb" style="background-image:url('https://i.ytimg.com/vi/eHTXQW58WhA/hqdefault.jpg')"></div>
+            <div class="copy"><strong>India's Got Latent</strong><p class="meta">Samay Raina</p></div>
+          </a>
+        </div>
+      </div>
+      <p class="picked" data-picked="upcoming">Selected: none</p>
+      <textarea data-screen="upcoming" data-target="" placeholder="What is wrong?"></textarea>
+    </section>
+
+    <section class="screen" id="upcoming-empty">
+      <div class="chrome">
+        <h2>Upcoming · none dated</h2>
+        <label class="approve"><input type="checkbox" data-approve="upcoming-empty" /> Approved</label>
+      </div>
+      <div class="frame">
+        <div class="pad">
+          <h3>Upcoming</h3>
+          <p class="empty">Nothing announced. New tapings show up here with a date.</p>
+          <h4>Aired</h4>
+          <a class="ep" href="#show" data-id="upcoming-empty-aired">
+            <div class="thumb" style="background-image:url('https://i.ytimg.com/vi/eHTXQW58WhA/hqdefault.jpg')"></div>
+            <div class="copy"><strong>India's Got Latent</strong><p class="meta">Samay Raina</p></div>
+          </a>
+        </div>
+      </div>
+      <p class="picked" data-picked="upcoming-empty">Selected: none</p>
+      <textarea data-screen="upcoming-empty" data-target="" placeholder="What is wrong?"></textarea>
+    </section>
+
+    <section class="screen" id="people">
+      <div class="chrome">
+        <h2>People</h2>
+        <label class="approve"><input type="checkbox" data-approve="people" /> Approved</label>
+      </div>
+      <div class="frame">
+        <div class="pad">
+          <h3>People</h3>
+          <p class="meta">Hosts and guests across the 16 shows.</p>
+          <label class="search">
+            <span>Search people</span>
+            <button class="btn" type="button" data-id="people-search">Search</button>
+          </label>
+          <div class="people">
+            <a class="person" href="#person" data-id="people-kaustubh">
+              <span class="mono">KA</span>
+              <span><strong>Kaustubh Agarwal</strong><p class="meta">Guest · 4 episodes</p></span>
+            </a>
+            <a class="person" href="#person" data-id="people-samay">
+              <span class="mono">SR</span>
+              <span><strong>Samay Raina</strong><p class="meta">Host · India's Got Latent</p></span>
+            </a>
+            <a class="person" href="#person" data-id="people-gaurav">
+              <span class="mono">GK</span>
+              <span><strong>Gaurav Kapoor</strong><p class="meta">Host · Lie Hard</p></span>
+            </a>
+          </div>
+        </div>
+      </div>
+      <p class="picked" data-picked="people">Selected: none</p>
+      <textarea data-screen="people" data-target="" placeholder="What is wrong?"></textarea>
+    </section>
+
+    <section class="screen" id="people-empty">
+      <div class="chrome">
+        <h2>People · no matches</h2>
+        <label class="approve"><input type="checkbox" data-approve="people-empty" /> Approved</label>
+      </div>
+      <div class="frame">
+        <div class="pad">
+          <h3>People</h3>
+          <label class="search">
+            <span>xyz</span>
+            <button class="btn primary" type="button" data-id="people-empty-clear">Clear</button>
+          </label>
+          <p class="empty">No people match “xyz”.</p>
+        </div>
+      </div>
+      <p class="picked" data-picked="people-empty">Selected: none</p>
+      <textarea data-screen="people-empty" data-target="" placeholder="What is wrong?"></textarea>
+    </section>
+
+    <section class="screen" id="person">
+      <div class="chrome">
+        <h2>Person</h2>
+        <label class="approve"><input type="checkbox" data-approve="person" /> Approved</label>
+      </div>
+      <div class="frame">
+        <div class="pad">
+          <p class="meta"><a href="#people" data-id="person-back">People</a> / Kaustubh Agarwal</p>
+          <div class="row"><span class="mono">KA</span><h3>Kaustubh Agarwal</h3></div>
+          <h4>Hosts</h4>
+          <p class="empty">Does not host a show in the catalog.</p>
+          <h4>Guest</h4>
+          <a class="ep" href="#episode" data-id="person-guest-1">
+            <div class="thumb" style="background-image:url('https://i.ytimg.com/vi/eHTXQW58WhA/hqdefault.jpg')"></div>
+            <div class="copy"><strong>India's Got Latent · S2 EP1</strong><p class="meta">Guest</p></div>
+          </a>
+        </div>
+      </div>
+      <p class="picked" data-picked="person">Selected: none</p>
+      <textarea data-screen="person" data-target="" placeholder="What is wrong?"></textarea>
+    </section>
+
+    <section class="screen" id="library">
+      <div class="chrome">
+        <h2>Library</h2>
+        <label class="approve"><input type="checkbox" data-approve="library" /> Approved</label>
+      </div>
+      <div class="frame">
+        <div class="pad">
+          <h3>Your library</h3>
+          <p class="meta">Stored in this browser. Not an account.</p>
+          <h4>Continue</h4>
+          <a class="ep" href="#episode" data-id="library-continue">
+            <div class="thumb" style="background-image:url('https://i.ytimg.com/vi/eHTXQW58WhA/hqdefault.jpg')"><span class="badge">12 min in</span></div>
+            <div class="copy"><strong>India's Got Latent · S2 EP1</strong><p class="meta">12 min in · not finished</p></div>
+          </a>
+          <h4>History</h4>
+          <a class="ep" href="#episode" data-id="library-history">
+            <div class="thumb" style="background-image:url('https://i.ytimg.com/vi/U-SuiWkRAlo/hqdefault.jpg')"></div>
+            <div class="copy"><strong>The Big Picture · EP3</strong><p class="meta">Finished</p></div>
+          </a>
+          <h4>Watchlist</h4>
+          <a class="ep" href="#episode" data-id="library-saved">
+            <div class="thumb" style="background-image:url('https://i.ytimg.com/vi/PAweiRjZl0A/hqdefault.jpg')"></div>
+            <div class="copy"><strong>Lie Hard · S3 EP2</strong><p class="meta">Saved</p></div>
+          </a>
+        </div>
+      </div>
+      <p class="picked" data-picked="library">Selected: none</p>
+      <textarea data-screen="library" data-target="" placeholder="What is wrong?"></textarea>
+    </section>
+
+    <section class="screen" id="library-empty">
+      <div class="chrome">
+        <h2>Library · empty</h2>
+        <label class="approve"><input type="checkbox" data-approve="library-empty" /> Approved</label>
+      </div>
+      <div class="frame">
+        <div class="pad">
+          <h3>Your library</h3>
+          <p class="empty">Nothing in progress. You have not saved an episode.</p>
+          <a class="btn primary" href="#directory" data-id="library-empty-discover">Discover shows</a>
+        </div>
+      </div>
+      <p class="picked" data-picked="library-empty">Selected: none</p>
+      <textarea data-screen="library-empty" data-target="" placeholder="What is wrong?"></textarea>
+    </section>
+
+    <section class="screen" id="search-empty">
+      <div class="chrome">
+        <h2>Discover · no matches</h2>
+        <label class="approve"><input type="checkbox" data-approve="search-empty" /> Approved</label>
+      </div>
+      <div class="frame">
+        <div class="pad">
+          <h3>Find your kind of funny</h3>
+          <label class="search">
+            <span>xyz</span>
+            <button class="btn primary" type="button" data-id="search-empty-clear">Clear</button>
+          </label>
+          <div class="filters">
+            <button class="chip on" type="button" data-id="search-empty-filter-all">All shows</button>
+            <button class="chip" type="button" data-id="search-empty-filter-panel">Panel shows</button>
+          </div>
+          <p class="empty">No shows match “xyz”.</p>
+        </div>
+      </div>
+      <p class="picked" data-picked="search-empty">Selected: none</p>
+      <textarea data-screen="search-empty" data-target="" placeholder="What is wrong?"></textarea>
+    </section>
+
+    <section class="screen" id="not-found">
+      <div class="chrome">
+        <h2>Not found</h2>
+        <label class="approve"><input type="checkbox" data-approve="not-found" /> Approved</label>
+      </div>
+      <div class="frame">
+        <div class="pad">
+          <h3>That show or episode is not in the catalog.</h3>
+          <p class="meta">The link may be old, or the episode was removed from the public list.</p>
+          <a class="btn primary" href="#directory" data-id="not-found-back">Back to Discover</a>
+        </div>
+      </div>
+      <p class="picked" data-picked="not-found">Selected: none</p>
+      <textarea data-screen="not-found" data-target="" placeholder="What is wrong?"></textarea>
+    </section>
+  </main>
+  <button id="copy" type="button">Copy feedback <span id="copy-status"></span></button>
+  <script>
+    var sectionOf = {
+      directory: "discover", show: "discover", episode: "discover",
+      "episode-blocked": "discover", "search-empty": "discover", "not-found": "discover",
+      upcoming: "upcoming", "upcoming-empty": "upcoming",
+      people: "people", "people-empty": "people", person: "people",
+      library: "library", "library-empty": "library"
+    };
+    function showScreen(id) {
+      var screen = document.getElementById(id);
+      if (!screen) return;
+      document.querySelectorAll(".screen").forEach(function (node) {
+        node.classList.toggle("is-on", node.id === id);
+      });
+      var section = sectionOf[id];
+      document.querySelectorAll(".float-bar a[data-section]").forEach(function (link) {
+        if (link.getAttribute("data-section") === section) link.setAttribute("aria-current", "page");
+        else link.removeAttribute("aria-current");
+      });
+      window.scrollTo(0, 0);
+    }
+    document.querySelectorAll("[data-id]").forEach(function (control) {
+      control.addEventListener("click", function () {
+        if (control.closest(".float-bar")) return;
+        var screen = control.closest(".screen") || document.querySelector(".screen.is-on");
+        if (screen) {
+          screen.querySelectorAll("[data-id].is-selected").forEach(function (node) {
+            node.classList.remove("is-selected");
+          });
+          control.classList.add("is-selected");
+          var cid = control.getAttribute("data-id");
+          var box = screen.querySelector("textarea[data-screen]");
+          if (box) box.setAttribute("data-target", cid);
+          var picked = screen.querySelector("[data-picked]");
+          if (picked) picked.textContent = "Selected: " + cid;
+        }
+      });
+    });
+    document.querySelectorAll('a[href^="#"]').forEach(function (link) {
+      link.addEventListener("click", function (event) {
+        var id = link.getAttribute("href").slice(1);
+        if (!document.getElementById(id)) return;
+        event.preventDefault();
+        showScreen(id);
+        if (!link.closest(".float-bar")) return;
+        var screen = document.getElementById(id);
+        var cid = link.getAttribute("data-id");
+        var box = screen.querySelector("textarea[data-screen]");
+        if (box) box.setAttribute("data-target", cid);
+        var picked = screen.querySelector("[data-picked]");
+        if (picked) picked.textContent = "Selected: " + cid;
+      });
+    });
+    var start = (location.hash || "#directory").slice(1);
+    showScreen(document.getElementById(start) ? start : "directory");
+    document.getElementById("copy").addEventListener("click", async function () {
+      var parts = [];
+      document.querySelectorAll("textarea[data-screen]").forEach(function (box) {
+        var text = box.value.trim();
+        if (!text) return;
+        var id = box.getAttribute("data-screen");
+        var target = box.getAttribute("data-target") || "";
+        var approve = document.querySelector('[data-approve="' + id + '"]');
+        var approved = approve && approve.checked ? "yes" : "no";
+        parts.push("## " + id + "\n\ntarget: " + target + "\napproved: " + approved + "\n\n" + text);
+      });
+      var status = document.getElementById("copy-status");
+      if (!parts.length) {
+        status.textContent = "Nothing to copy";
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(parts.join("\n\n"));
+        status.textContent = "Copied";
+      } catch (err) {
+        status.textContent = "Copy failed";
+      }
+    });
+  </script>
+</body>
+</html>

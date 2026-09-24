@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import type { Show } from "../lib/catalog.ts";
+import { youtubeThumbUrl } from "../lib/thumbs.ts";
 
 export type ShowCardProps = {
   show: Show;
@@ -8,24 +9,29 @@ export type ShowCardProps = {
   averageScore: number | null;
 };
 
-function formatScore(averageScore: number | null): string {
+function formatScorePill(averageScore: number | null): string | null {
   if (averageScore === null) {
-    return "No score yet";
+    return null;
   }
 
   return averageScore.toFixed(1);
 }
 
 export function ShowCard({ show, slug, averageScore }: ShowCardProps) {
-  const episodeLabel = show.episodes.length === 1 ? "episode" : "episodes";
+  const scorePill = formatScorePill(averageScore);
 
   return (
-    <Link className="card" href={`/shows/${slug}`}>
-      <h4>{show.name}</h4>
-      <p className="meta">{show.host} · {show.category}</p>
-      <p className="meta">
-        {show.episodes.length} {episodeLabel} · {formatScore(averageScore)}
-      </p>
+    <Link className="show-card" href={`/shows/${slug}`}>
+      <div className="show-card__thumb">
+        <img
+          src={youtubeThumbUrl(show.coverVideoId)}
+          alt={show.name}
+          className="show-card__img"
+        />
+        {scorePill ? <span className="show-card__score">{scorePill}</span> : null}
+      </div>
+      <h4 className="show-card__title">{show.name}</h4>
+      <p className="show-card__meta">{show.host} · {show.category}</p>
     </Link>
   );
 }

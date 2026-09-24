@@ -6,6 +6,7 @@ import { SiteHeader } from "../../../components/site-header.tsx";
 import { getShow, loadCatalog, slugFromName, type Show } from "../../../lib/catalog.ts";
 import { openReviewsDb } from "../../../lib/reviews-db.ts";
 import { averageScore, listReviews } from "../../../lib/reviews.ts";
+import { youtubeThumbUrl } from "../../../lib/thumbs.ts";
 
 function showScoreSummary(db: DatabaseSync, show: Show): { average: number | null; reviewCount: number } {
   let total = 0;
@@ -29,21 +30,30 @@ function formatDuration(seconds: number): string {
   return `${minutes} min`;
 }
 
-function formatEpisodeScore(score: number | null): string {
-  if (score === null) {
+function formatEpisodeScore(score: number | null, reviewCount: number): string {
+  if (score === null || reviewCount === 0) {
     return "No score yet";
   }
 
-  return score.toFixed(1);
+  const reviewLabel = reviewCount === 1 ? "review" : "reviews";
+  return `${score.toFixed(1)} from ${reviewCount} ${reviewLabel}`;
 }
 
 function formatShowScore(average: number | null, reviewCount: number): string {
-  if (average === null) {
+  if (average === null || reviewCount === 0) {
     return "No score yet";
   }
 
   const reviewLabel = reviewCount === 1 ? "review" : "reviews";
   return `${average.toFixed(1)} from ${reviewCount} ${reviewLabel}`;
+}
+
+function formatScorePill(average: number | null): string | null {
+  if (average === null) {
+    return null;
+  }
+
+  return average.toFixed(1);
 }
 
 type ShowPageProps = {
@@ -61,6 +71,7 @@ export default async function ShowPage({ params }: ShowPageProps) {
 
   const db = openReviewsDb();
   const score = showScoreSummary(db, show);
+  const scorePill = formatScorePill(score.average);
 
   return (
     <>
@@ -69,25 +80,44 @@ export default async function ShowPage({ params }: ShowPageProps) {
         <p className="meta">
           <Link href="/">Discover</Link> / {show.name}
         </p>
+        <div className="show-cover">
+          <img
+            src={youtubeThumbUrl(show.coverVideoId)}
+            alt={show.name}
+            className="show-cover__img"
+          />
+          {scorePill ? <span className="show-cover__score">{scorePill}</span> : null}
+        </div>
         <h3>{show.name}</h3>
-        <p className="meta">Hosted by {show.host}</p>
-        <p className="meta">{show.category}</p>
-        <p className="meta">{formatShowScore(score.average, score.reviewCount)}</p>
+        <p className="meta">
+          Hosted by {show.host} · {show.category} · {formatShowScore(score.average, score.reviewCount)}
+        </p>
         {show.availabilityNote ? <p className="note">{show.availabilityNote}</p> : null}
         {show.episodes.map((episode) => {
+          const episodeReviews = listReviews(db, episode.videoId);
           const episodeScore = averageScore(db, episode.videoId);
           const statusLabel = episode.status === "upcoming" ? "Upcoming" : "Aired";
 
           return (
             <Link
               key={episode.videoId}
-              className="ep"
+              className="episode-row"
               href={`/shows/${slugFromName(show.name)}/episodes/${episode.videoId}`}
             >
-              <strong>{episode.title}</strong>
-              <p className="meta">
-                {formatDuration(episode.duration)} · {formatEpisodeScore(episodeScore)} · {statusLabel}
-              </p>
+              <div className="episode-row__thumb">
+                <img
+                  src={youtubeThumbUrl(episode.videoId)}
+                  alt={episode.title}
+                  className="episode-row__img"
+                />
+                <span className="episode-row__badge">{formatDuration(episode.duration)}</span>
+              </div>
+              <div className="episode-row__copy">
+                <strong>{episode.title}</strong>
+                <p className="meta">
+                  {formatEpisodeScore(episodeScore, episodeReviews.length)} · {statusLabel}
+                </p>
+              </div>
             </Link>
           );
         })}
