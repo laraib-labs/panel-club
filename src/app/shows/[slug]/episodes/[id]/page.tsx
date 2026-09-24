@@ -12,18 +12,14 @@ import {
 } from "../../../../../components/review-form.tsx";
 import { getEpisode, getShow, loadAppCatalog } from "../../../../../lib/catalog.ts";
 import { parseClientIp, takeReviewSlot } from "../../../../../lib/review-rate-limit.ts";
-import { getReviewsPool, openReviewsDb, reviewsUsesPostgres } from "../../../../../lib/reviews-db.ts";
+import { getReviewsPool } from "../../../../../lib/reviews-db.ts";
 import {
   averageScore,
-  averageScorePg,
   listReviewThread,
-  listReviewThreadPg,
   saveReply,
-  saveReplyPg,
   saveReview,
-  saveReviewPg,
-  type ReviewThread,
-} from "../../../../../lib/reviews.ts";
+} from "../../../../../lib/reviews-pg.ts";
+import type { ReviewThread } from "../../../../../lib/reviews.ts";
 
 export const dynamic = "force-dynamic";
 
@@ -133,7 +129,7 @@ async function submitReview(
 ): Promise<void> {
   "use server";
 
-  if (!takeReviewSlot(await clientIpFromHeaders())) {
+  if (!(await takeReviewSlot(await clientIpFromHeaders()))) {
     return;
   }
 
@@ -149,26 +145,14 @@ async function submitReview(
   const viewer = await resolveViewer(displayName);
   const catalog = await loadAppCatalog();
 
-  if (reviewsUsesPostgres()) {
-    await saveReviewPg(getReviewsPool(), catalog, {
-      episodeId,
-      viewerId: viewer.id,
-      displayName,
-      stars,
-      body,
-      spoiler,
-    });
-  } else {
-    const db = openReviewsDb();
-    saveReview(db, catalog, {
-      episodeId,
-      viewerId: viewer.id,
-      displayName,
-      stars,
-      body,
-      spoiler,
-    });
-  }
+  await saveReview(getReviewsPool(), catalog, {
+    episodeId,
+    viewerId: viewer.id,
+    displayName,
+    stars,
+    body,
+    spoiler,
+  });
 
   revalidatePath(`/shows/${slug}/episodes/${episodeId}`);
 }
@@ -180,7 +164,7 @@ async function submitReply(
 ): Promise<void> {
   "use server";
 
-  if (!takeReviewSlot(await clientIpFromHeaders())) {
+  if (!(await takeReviewSlot(await clientIpFromHeaders()))) {
     return;
   }
 
@@ -195,24 +179,13 @@ async function submitReply(
 
   const viewer = await resolveViewer(displayName);
 
-  if (reviewsUsesPostgres()) {
-    await saveReplyPg(getReviewsPool(), {
-      parentId,
-      viewerId: viewer.id,
-      displayName,
-      body,
-      spoiler,
-    });
-  } else {
-    const db = openReviewsDb();
-    saveReply(db, {
-      parentId,
-      viewerId: viewer.id,
-      displayName,
-      body,
-      spoiler,
-    });
-  }
+  await saveReply(getReviewsPool(), {
+    parentId,
+    viewerId: viewer.id,
+    displayName,
+    body,
+    spoiler,
+  });
 
   revalidatePath(`/shows/${slug}/episodes/${episodeId}`);
 }
@@ -231,13 +204,10 @@ export default async function EpisodePage({
     notFound();
   }
 
-  const threads = reviewsUsesPostgres()
-    ? await listReviewThreadPg(getReviewsPool(), id)
-    : listReviewThread(openReviewsDb(), id);
+  const pool = getReviewsPool();
+  const threads = await listReviewThread(pool, id);
   const reviewCount = threads.length;
-  const score = reviewsUsesPostgres()
-    ? await averageScorePg(getReviewsPool(), id)
-    : averageScore(openReviewsDb(), id);
+  const score = await averageScore(pool, id);
   const cookieStore = await cookies();
   const viewer = parseViewerCookie(cookieStore.get("pc_viewer")?.value);
   const submit = submitReview.bind(null, slug, id);

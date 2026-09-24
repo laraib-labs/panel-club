@@ -3,8 +3,8 @@ import { notFound } from "next/navigation";
 
 import { SiteHeader } from "../../../components/site-header.tsx";
 import { getShow, loadAppCatalog, slugFromName, type Show } from "../../../lib/catalog.ts";
-import { getReviewsPool, openReviewsDb, reviewsUsesPostgres } from "../../../lib/reviews-db.ts";
-import { averageScore, averageScorePg, listReviews, listReviewsPg } from "../../../lib/reviews.ts";
+import { getReviewsPool } from "../../../lib/reviews-db.ts";
+import { averageScore, listReviews } from "../../../lib/reviews-pg.ts";
 import { youtubeThumbUrl } from "../../../lib/thumbs.ts";
 
 export const dynamic = "force-dynamic";
@@ -13,21 +13,11 @@ async function showScoreSummary(show: Show): Promise<{ average: number | null; r
   let total = 0;
   let count = 0;
 
-  if (reviewsUsesPostgres()) {
-    const pool = getReviewsPool();
-    for (const episode of show.episodes) {
-      for (const review of await listReviewsPg(pool, episode.videoId)) {
-        total += review.stars ?? 0;
-        count += 1;
-      }
-    }
-  } else {
-    const db = openReviewsDb();
-    for (const episode of show.episodes) {
-      for (const review of listReviews(db, episode.videoId)) {
-        total += review.stars ?? 0;
-        count += 1;
-      }
+  const pool = getReviewsPool();
+  for (const episode of show.episodes) {
+    for (const review of await listReviews(pool, episode.videoId)) {
+      total += review.stars ?? 0;
+      count += 1;
     }
   }
 
@@ -83,18 +73,12 @@ export default async function ShowPage({ params }: ShowPageProps) {
 
   const score = await showScoreSummary(show);
   const scorePill = formatScorePill(score.average);
-  const usePostgres = reviewsUsesPostgres();
-  const pool = usePostgres ? getReviewsPool() : null;
-  const db = usePostgres ? null : openReviewsDb();
+  const pool = getReviewsPool();
 
   const episodeRows = await Promise.all(
     show.episodes.map(async (episode) => {
-      const episodeReviews = usePostgres
-        ? await listReviewsPg(pool as NonNullable<typeof pool>, episode.videoId)
-        : listReviews(db as NonNullable<typeof db>, episode.videoId);
-      const episodeScore = usePostgres
-        ? await averageScorePg(pool as NonNullable<typeof pool>, episode.videoId)
-        : averageScore(db as NonNullable<typeof db>, episode.videoId);
+      const episodeReviews = await listReviews(pool, episode.videoId);
+      const episodeScore = await averageScore(pool, episode.videoId);
 
       return {
         episode,

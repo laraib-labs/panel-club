@@ -1,7 +1,5 @@
 import { randomUUID } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
-import type pg from "pg";
-
 import type { Catalog } from "./catalog.ts";
 import { getEpisode } from "./catalog.ts";
 
@@ -78,18 +76,6 @@ type ReviewRow = {
   created_at: string;
 };
 
-type PgReviewRow = {
-  id: string;
-  episode_id: string;
-  viewer_id: string;
-  parent_id: string | null;
-  display_name: string;
-  stars: number | null;
-  body: string;
-  spoiler: boolean;
-  created_at: string;
-};
-
 export function initReviewsSchema(db: DatabaseSync): void {
   db.exec(REVIEWS_SCHEMA);
 }
@@ -98,7 +84,7 @@ export function ensureReviewsSchema(db: DatabaseSync): void {
   db.exec(REVIEWS_TABLE);
 }
 
-function episodeExists(catalog: Catalog, episodeId: string): boolean {
+export function reviewEpisodeExists(catalog: Catalog, episodeId: string): boolean {
   for (const show of catalog.shows) {
     if (getEpisode(show, episodeId)) {
       return true;
@@ -112,7 +98,7 @@ function stripTags(value: string): string {
   return value.replace(/<[^>]*>/g, "");
 }
 
-function sanitizeDisplayName(displayName: string): string {
+export function sanitizeDisplayName(displayName: string): string {
   const sanitized = stripTags(displayName).trim();
 
   if (sanitized.length === 0) {
@@ -126,7 +112,7 @@ function sanitizeDisplayName(displayName: string): string {
   return sanitized;
 }
 
-function sanitizeBody(body: string): string {
+export function sanitizeBody(body: string): string {
   const sanitized = stripTags(body).trim();
 
   if (sanitized.length === 0) {
@@ -140,7 +126,7 @@ function sanitizeBody(body: string): string {
   return sanitized;
 }
 
-function assertValidStars(stars: number): void {
+export function assertValidStars(stars: number): void {
   if (!Number.isInteger(stars) || stars < 1 || stars > 5) {
     throw new Error("Stars must be an integer from 1 to 5");
   }
@@ -159,32 +145,6 @@ function rowToReview(row: ReviewRow): Review {
     createdAt: row.created_at,
   };
 }
-
-function pgRowToReview(row: PgReviewRow): Review {
-  return {
-    id: row.id,
-    episodeId: row.episode_id,
-    viewerId: row.viewer_id,
-    parentId: row.parent_id,
-    displayName: row.display_name,
-    stars: row.stars,
-    body: row.body,
-    spoiler: row.spoiler,
-    createdAt: row.created_at,
-  };
-}
-
-const REVIEW_COLUMNS = `
-  id,
-  episode_id,
-  viewer_id,
-  parent_id,
-  display_name,
-  stars,
-  body,
-  spoiler,
-  created_at
-`;
 
 function findRootReviewId(
   db: DatabaseSync,
@@ -250,7 +210,7 @@ function countViewerRepliesOnEpisode(
 }
 
 export function saveReview(db: DatabaseSync, catalog: Catalog, input: SaveReviewInput): void {
-  if (!episodeExists(catalog, input.episodeId)) {
+  if (!reviewEpisodeExists(catalog, input.episodeId)) {
     throw new Error(`Unknown episode: ${input.episodeId}`);
   }
 
@@ -431,238 +391,4 @@ export function averageScore(db: DatabaseSync, episodeId: string): number | null
   }
 
   return row.average;
-}
-
-async function findRootReviewIdPg(
-  pool: pg.Pool,
-  episodeId: string,
-  viewerId: string,
-): Promise<string | null> {
-  const result = await pool.query<{ id: string }>(
-    `
-    SELECT id
-    FROM reviews
-    WHERE episode_id = $1
-      AND viewer_id = $2
-      AND parent_id IS NULL
-  `,
-    [episodeId, viewerId],
-  );
-
-  return result.rows[0]?.id ?? null;
-}
-
-async function getReviewByIdPg(pool: pg.Pool, id: string): Promise<Review | null> {
-  const result = await pool.query<PgReviewRow>(
-    `
-    SELECT ${REVIEW_COLUMNS}
-    FROM reviews
-    WHERE id = $1
-  `,
-    [id],
-  );
-
-  const row = result.rows[0];
-  return row ? pgRowToReview(row) : null;
-}
-
-async function countViewerRepliesOnEpisodePg(
-  pool: pg.Pool,
-  episodeId: string,
-  viewerId: string,
-): Promise<number> {
-  const result = await pool.query<{ count: string }>(
-    `
-    SELECT COUNT(*)::text AS count
-    FROM reviews
-    WHERE episode_id = $1
-      AND viewer_id = $2
-      AND parent_id IS NOT NULL
-  `,
-    [episodeId, viewerId],
-  );
-
-  return Number(result.rows[0]?.count ?? 0);
-}
-
-export async function saveReviewPg(
-  pool: pg.Pool,
-  catalog: Catalog,
-  input: SaveReviewInput,
-): Promise<void> {
-  if (!episodeExists(catalog, input.episodeId)) {
-    throw new Error(`Unknown episode: ${input.episodeId}`);
-  }
-
-  assertValidStars(input.stars);
-
-  const displayName = sanitizeDisplayName(input.displayName);
-  const body = sanitizeBody(input.body);
-  const createdAt = new Date().toISOString();
-  const existingId = await findRootReviewIdPg(pool, input.episodeId, input.viewerId);
-
-  if (existingId) {
-    await pool.query(
-      `
-      UPDATE reviews
-      SET
-        display_name = $1,
-        stars = $2,
-        body = $3,
-        spoiler = $4,
-        created_at = $5
-      WHERE id = $6
-    `,
-      [displayName, input.stars, body, input.spoiler, createdAt, existingId],
-    );
-    return;
-  }
-
-  await pool.query(
-    `
-    INSERT INTO reviews (
-      id,
-      episode_id,
-      viewer_id,
-      parent_id,
-      display_name,
-      stars,
-      body,
-      spoiler,
-      created_at
-    ) VALUES ($1, $2, $3, NULL, $4, $5, $6, $7, $8)
-  `,
-    [
-      randomUUID(),
-      input.episodeId,
-      input.viewerId,
-      displayName,
-      input.stars,
-      body,
-      input.spoiler,
-      createdAt,
-    ],
-  );
-}
-
-export async function saveReplyPg(pool: pg.Pool, input: SaveReplyInput): Promise<Review> {
-  const parent = await getReviewByIdPg(pool, input.parentId);
-
-  if (!parent) {
-    throw new Error(`Unknown parent review: ${input.parentId}`);
-  }
-
-  if (parent.parentId !== null) {
-    throw new Error("Replies cannot be nested more than one level");
-  }
-
-  if (
-    (await countViewerRepliesOnEpisodePg(pool, parent.episodeId, input.viewerId)) >=
-    MAX_REPLIES_PER_EPISODE_PER_VIEWER
-  ) {
-    throw new Error(
-      `Viewer may post at most ${MAX_REPLIES_PER_EPISODE_PER_VIEWER} replies per episode`,
-    );
-  }
-
-  const displayName = sanitizeDisplayName(input.displayName);
-  const body = sanitizeBody(input.body);
-  const id = randomUUID();
-  const createdAt = new Date().toISOString();
-
-  await pool.query(
-    `
-    INSERT INTO reviews (
-      id,
-      episode_id,
-      viewer_id,
-      parent_id,
-      display_name,
-      stars,
-      body,
-      spoiler,
-      created_at
-    ) VALUES ($1, $2, $3, $4, $5, NULL, $6, $7, $8)
-  `,
-    [
-      id,
-      parent.episodeId,
-      input.viewerId,
-      parent.id,
-      displayName,
-      body,
-      input.spoiler,
-      createdAt,
-    ],
-  );
-
-  return {
-    id,
-    episodeId: parent.episodeId,
-    viewerId: input.viewerId,
-    parentId: parent.id,
-    displayName,
-    stars: null,
-    body,
-    spoiler: input.spoiler,
-    createdAt,
-  };
-}
-
-export async function listReviewsPg(pool: pg.Pool, episodeId: string): Promise<Review[]> {
-  const result = await pool.query<PgReviewRow>(
-    `
-    SELECT ${REVIEW_COLUMNS}
-    FROM reviews
-    WHERE episode_id = $1
-      AND parent_id IS NULL
-    ORDER BY created_at DESC
-  `,
-    [episodeId],
-  );
-
-  return result.rows.map(pgRowToReview);
-}
-
-export async function listReviewThreadPg(pool: pg.Pool, episodeId: string): Promise<ReviewThread[]> {
-  const roots = await listReviewsPg(pool, episodeId);
-  const threads: ReviewThread[] = [];
-
-  for (const review of roots) {
-    const result = await pool.query<PgReviewRow>(
-      `
-      SELECT ${REVIEW_COLUMNS}
-      FROM reviews
-      WHERE parent_id = $1
-      ORDER BY created_at ASC
-    `,
-      [review.id],
-    );
-
-    threads.push({
-      review,
-      replies: result.rows.map(pgRowToReview),
-    });
-  }
-
-  return threads;
-}
-
-export async function averageScorePg(pool: pg.Pool, episodeId: string): Promise<number | null> {
-  const result = await pool.query<{ average: string | null }>(
-    `
-    SELECT AVG(stars)::text AS average
-    FROM reviews
-    WHERE episode_id = $1
-      AND parent_id IS NULL
-  `,
-    [episodeId],
-  );
-
-  const average = result.rows[0]?.average;
-  if (average === null || average === undefined) {
-    return null;
-  }
-
-  return Number(average);
 }

@@ -15,6 +15,8 @@
     "db:seed": "node --experimental-strip-types src/platform/seed.ts"
   },
   "dependencies": {
+    "@upstash/ratelimit": "^2.2.0",
+    "@upstash/redis": "^1.39.0",
     "next": "^15.1.0",
     "pg": "^8.23.0",
     "react": "^19.0.0",

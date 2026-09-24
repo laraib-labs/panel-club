@@ -13,7 +13,7 @@ export function reviewsDbPath(): string {
   return join(dataDir, "panel-club.sqlite");
 }
 
-/** True when Neon/Postgres reviews are configured. Pages still use sqlite until the Live read slice. */
+/** True when Neon/Postgres reviews are configured (runtime pages require this). */
 export function reviewsUsesPostgres(): boolean {
   return Boolean(process.env.DATABASE_URL);
 }
@@ -38,7 +38,7 @@ export async function closeReviewsPool(): Promise<void> {
   }
 }
 
-/** Local sqlite reviews store. Used by pages and unit tests regardless of DATABASE_URL. */
+/** Local sqlite reviews store for unit tests and local tooling. */
 export function openReviewsDb(): DatabaseSync {
   const dbPath = reviewsDbPath();
   mkdirSync(dirname(dbPath), { recursive: true });

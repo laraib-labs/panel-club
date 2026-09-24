@@ -1,28 +1,18 @@
 import { Directory } from "../components/directory.tsx";
 import { SiteHeader } from "../components/site-header.tsx";
 import { loadAppCatalog, slugFromName, type Show } from "../lib/catalog.ts";
-import { getReviewsPool, openReviewsDb, reviewsUsesPostgres } from "../lib/reviews-db.ts";
-import { listReviews, listReviewsPg } from "../lib/reviews.ts";
+import { getReviewsPool } from "../lib/reviews-db.ts";
+import { listReviews } from "../lib/reviews-pg.ts";
 
 async function showAverageScore(show: Show): Promise<number | null> {
   let total = 0;
   let count = 0;
 
-  if (reviewsUsesPostgres()) {
-    const pool = getReviewsPool();
-    for (const episode of show.episodes) {
-      for (const review of await listReviewsPg(pool, episode.videoId)) {
-        total += review.stars ?? 0;
-        count += 1;
-      }
-    }
-  } else {
-    const db = openReviewsDb();
-    for (const episode of show.episodes) {
-      for (const review of listReviews(db, episode.videoId)) {
-        total += review.stars ?? 0;
-        count += 1;
-      }
+  const pool = getReviewsPool();
+  for (const episode of show.episodes) {
+    for (const review of await listReviews(pool, episode.videoId)) {
+      total += review.stars ?? 0;
+      count += 1;
     }
   }
 
