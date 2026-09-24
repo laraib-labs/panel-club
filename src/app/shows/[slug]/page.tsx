@@ -1,19 +1,22 @@
-import type { DatabaseSync } from "node:sqlite";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { SiteHeader } from "../../../components/site-header.tsx";
-import { getShow, loadCatalog, slugFromName, type Show } from "../../../lib/catalog.ts";
-import { openReviewsDb } from "../../../lib/reviews-db.ts";
-import { averageScore, listReviews } from "../../../lib/reviews.ts";
+import { getShow, loadAppCatalog, slugFromName, type Show } from "../../../lib/catalog.ts";
+import { getReviewsPool } from "../../../lib/reviews-db.ts";
+import { averageScore, listReviews } from "../../../lib/reviews-pg.ts";
+import { youtubeThumbUrl } from "../../../lib/thumbs.ts";
 
-function showScoreSummary(db: DatabaseSync, show: Show): { average: number | null; reviewCount: number } {
+export const dynamic = "force-dynamic";
+
+async function showScoreSummary(show: Show): Promise<{ average: number | null; reviewCount: number }> {
   let total = 0;
   let count = 0;
 
+  const pool = getReviewsPool();
   for (const episode of show.episodes) {
-    for (const review of listReviews(db, episode.videoId)) {
-      total += review.stars;
+    for (const review of await listReviews(pool, episode.videoId)) {
+      total += review.stars ?? 0;
       count += 1;
     }
   }
@@ -29,21 +32,30 @@ function formatDuration(seconds: number): string {
   return `${minutes} min`;
 }
 
-function formatEpisodeScore(score: number | null): string {
-  if (score === null) {
+function formatEpisodeScore(score: number | null, reviewCount: number): string {
+  if (score === null || reviewCount === 0) {
     return "No score yet";
   }
 
-  return score.toFixed(1);
+  const reviewLabel = reviewCount === 1 ? "review" : "reviews";
+  return `${score.toFixed(1)} from ${reviewCount} ${reviewLabel}`;
 }
 
 function formatShowScore(average: number | null, reviewCount: number): string {
-  if (average === null) {
+  if (average === null || reviewCount === 0) {
     return "No score yet";
   }
 
   const reviewLabel = reviewCount === 1 ? "review" : "reviews";
   return `${average.toFixed(1)} from ${reviewCount} ${reviewLabel}`;
+}
+
+function formatScorePill(average: number | null): string | null {
+  if (average === null) {
+    return null;
+  }
+
+  return average.toFixed(1);
 }
 
 type ShowPageProps = {
@@ -52,15 +64,30 @@ type ShowPageProps = {
 
 export default async function ShowPage({ params }: ShowPageProps) {
   const { slug } = await params;
-  const catalog = loadCatalog();
+  const catalog = await loadAppCatalog();
   const show = getShow(catalog, slug);
 
   if (!show) {
     notFound();
   }
 
-  const db = openReviewsDb();
-  const score = showScoreSummary(db, show);
+  const score = await showScoreSummary(show);
+  const scorePill = formatScorePill(score.average);
+  const pool = getReviewsPool();
+
+  const episodeRows = await Promise.all(
+    show.episodes.map(async (episode) => {
+      const episodeReviews = await listReviews(pool, episode.videoId);
+      const episodeScore = await averageScore(pool, episode.videoId);
+
+      return {
+        episode,
+        episodeReviews,
+        episodeScore,
+        statusLabel: episode.status === "upcoming" ? "Upcoming" : "Aired",
+      };
+    }),
+  );
 
   return (
     <>
@@ -69,28 +96,41 @@ export default async function ShowPage({ params }: ShowPageProps) {
         <p className="meta">
           <Link href="/">Discover</Link> / {show.name}
         </p>
+        <div className="show-cover">
+          <img
+            src={youtubeThumbUrl(show.coverVideoId)}
+            alt={show.name}
+            className="show-cover__img"
+          />
+          {scorePill ? <span className="show-cover__score">{scorePill}</span> : null}
+        </div>
         <h3>{show.name}</h3>
-        <p className="meta">Hosted by {show.host}</p>
-        <p className="meta">{show.category}</p>
-        <p className="meta">{formatShowScore(score.average, score.reviewCount)}</p>
+        <p className="meta">
+          Hosted by {show.host} · {show.category} · {formatShowScore(score.average, score.reviewCount)}
+        </p>
         {show.availabilityNote ? <p className="note">{show.availabilityNote}</p> : null}
-        {show.episodes.map((episode) => {
-          const episodeScore = averageScore(db, episode.videoId);
-          const statusLabel = episode.status === "upcoming" ? "Upcoming" : "Aired";
-
-          return (
-            <Link
-              key={episode.videoId}
-              className="ep"
-              href={`/shows/${slugFromName(show.name)}/episodes/${episode.videoId}`}
-            >
+        {episodeRows.map(({ episode, episodeReviews, episodeScore, statusLabel }) => (
+          <Link
+            key={episode.videoId}
+            className="episode-row"
+            href={`/shows/${slugFromName(show.name)}/episodes/${episode.videoId}`}
+          >
+            <div className="episode-row__thumb">
+              <img
+                src={youtubeThumbUrl(episode.videoId)}
+                alt={episode.title}
+                className="episode-row__img"
+              />
+              <span className="episode-row__badge">{formatDuration(episode.duration)}</span>
+            </div>
+            <div className="episode-row__copy">
               <strong>{episode.title}</strong>
               <p className="meta">
-                {formatDuration(episode.duration)} · {formatEpisodeScore(episodeScore)} · {statusLabel}
+                {formatEpisodeScore(episodeScore, episodeReviews.length)} · {statusLabel}
               </p>
-            </Link>
-          );
-        })}
+            </div>
+          </Link>
+        ))}
       </div>
     </>
   );

@@ -2,3 +2,5 @@ node_modules
 .next
 data/*.sqlite
 tsconfig.tsbuildinfo
+.env
+.env.local

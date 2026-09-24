@@ -3,7 +3,17 @@ import { DatabaseSync } from "node:sqlite";
 import { describe, it } from "node:test";
 
 import type { Catalog } from "./catalog.ts";
-import { averageScore, initReviewsSchema, listReviews, saveReview } from "./reviews.ts";
+import {
+  BODY_MAX_LENGTH,
+  DISPLAY_NAME_MAX_LENGTH,
+  MAX_REPLIES_PER_EPISODE_PER_VIEWER,
+  averageScore,
+  initReviewsSchema,
+  listReviewThread,
+  listReviews,
+  saveReply,
+  saveReview,
+} from "./reviews.ts";
 
 const fixtureCatalog: Catalog = {
   shows: [
@@ -44,6 +54,26 @@ function makeDb(): DatabaseSync {
   return db;
 }
 
+function saveRootReview(
+  db: DatabaseSync,
+  overrides: Partial<Parameters<typeof saveReview>[2]> & Pick<Parameters<typeof saveReview>[2], "viewerId">,
+): string {
+  saveReview(db, fixtureCatalog, {
+    episodeId: "ep-one",
+    displayName: "Alice",
+    stars: 4,
+    body: "Fun episode",
+    spoiler: false,
+    ...overrides,
+  });
+
+  const review = listReviews(db, overrides.episodeId ?? "ep-one").find(
+    (row) => row.viewerId === overrides.viewerId,
+  );
+  assert.ok(review?.id);
+  return review.id;
+}
+
 describe("reviews", () => {
   it("saveReview stores a review for a known episode", () => {
     const db = makeDb();
@@ -64,6 +94,8 @@ describe("reviews", () => {
     assert.equal(reviews[0]?.stars, 4);
     assert.equal(reviews[0]?.body, "Fun episode");
     assert.equal(reviews[0]?.spoiler, false);
+    assert.equal(reviews[0]?.parentId, null);
+    assert.ok(reviews[0]?.id);
   });
 
   it("saveReview rejects unknown episode ids", () => {
@@ -114,6 +146,8 @@ describe("reviews", () => {
       spoiler: false,
     });
 
+    const firstId = listReviews(db, "ep-one")[0]?.id;
+
     saveReview(db, fixtureCatalog, {
       episodeId: "ep-one",
       viewerId: "viewer-1",
@@ -125,6 +159,7 @@ describe("reviews", () => {
 
     const reviews = listReviews(db, "ep-one");
     assert.equal(reviews.length, 1);
+    assert.equal(reviews[0]?.id, firstId);
     assert.equal(reviews[0]?.stars, 5);
     assert.equal(reviews[0]?.body, "Changed my mind");
     assert.equal(reviews[0]?.spoiler, true);
@@ -187,5 +222,191 @@ describe("reviews", () => {
     });
 
     assert.equal(averageScore(db, "ep-two"), 4.5);
+  });
+
+  it("saveReview trims display name and body and strips tags", () => {
+    const db = makeDb();
+
+    saveReview(db, fixtureCatalog, {
+      episodeId: "ep-one",
+      viewerId: "viewer-1",
+      displayName: "  <b>Alice</b>  ",
+      stars: 4,
+      body: "  <i>Nice</i> episode  ",
+      spoiler: false,
+    });
+
+    const review = listReviews(db, "ep-one")[0];
+    assert.equal(review?.displayName, "Alice");
+    assert.equal(review?.body, "Nice episode");
+  });
+
+  it("saveReview rejects display names longer than 40 characters", () => {
+    const db = makeDb();
+
+    assert.throws(
+      () =>
+        saveReview(db, fixtureCatalog, {
+          episodeId: "ep-one",
+          viewerId: "viewer-1",
+          displayName: "a".repeat(DISPLAY_NAME_MAX_LENGTH + 1),
+          stars: 4,
+          body: "Fine",
+          spoiler: false,
+        }),
+      /display name/i,
+    );
+  });
+
+  it("saveReview rejects bodies longer than 500 characters", () => {
+    const db = makeDb();
+
+    assert.throws(
+      () =>
+        saveReview(db, fixtureCatalog, {
+          episodeId: "ep-one",
+          viewerId: "viewer-1",
+          displayName: "Alice",
+          stars: 4,
+          body: "a".repeat(BODY_MAX_LENGTH + 1),
+          spoiler: false,
+        }),
+      /body/i,
+    );
+  });
+
+  it("saveReply inserts a one-level reply with null stars", () => {
+    const db = makeDb();
+    const parentId = saveRootReview(db, { viewerId: "viewer-root" });
+
+    const reply = saveReply(db, {
+      parentId,
+      viewerId: "viewer-reply",
+      displayName: "Bob",
+      body: "Agreed",
+      spoiler: false,
+    });
+
+    assert.equal(reply.parentId, parentId);
+    assert.equal(reply.stars, null);
+    assert.equal(reply.body, "Agreed");
+  });
+
+  it("saveReply rejects missing parent ids", () => {
+    const db = makeDb();
+
+    assert.throws(
+      () =>
+        saveReply(db, {
+          parentId: "missing-parent",
+          viewerId: "viewer-reply",
+          displayName: "Bob",
+          body: "Nope",
+          spoiler: false,
+        }),
+      /unknown parent/i,
+    );
+  });
+
+  it("saveReply rejects replies to replies", () => {
+    const db = makeDb();
+    const parentId = saveRootReview(db, { viewerId: "viewer-root" });
+    const reply = saveReply(db, {
+      parentId,
+      viewerId: "viewer-reply",
+      displayName: "Bob",
+      body: "First reply",
+      spoiler: false,
+    });
+
+    assert.throws(
+      () =>
+        saveReply(db, {
+          parentId: reply.id,
+          viewerId: "viewer-nested",
+          displayName: "Carol",
+          body: "Too deep",
+          spoiler: false,
+        }),
+      /one level/i,
+    );
+  });
+
+  it("saveReply rejects more than three replies per viewer per episode", () => {
+    const db = makeDb();
+    const parentId = saveRootReview(db, { viewerId: "viewer-root" });
+
+    for (let index = 0; index < MAX_REPLIES_PER_EPISODE_PER_VIEWER; index += 1) {
+      saveReply(db, {
+        parentId,
+        viewerId: "viewer-reply",
+        displayName: "Bob",
+        body: `Reply ${index + 1}`,
+        spoiler: false,
+      });
+    }
+
+    assert.throws(
+      () =>
+        saveReply(db, {
+          parentId,
+          viewerId: "viewer-reply",
+          displayName: "Bob",
+          body: "One too many",
+          spoiler: false,
+        }),
+      /at most 3 replies/i,
+    );
+  });
+
+  it("listReviewThread returns roots with nested replies only one level deep", () => {
+    const db = makeDb();
+    const parentId = saveRootReview(db, { viewerId: "viewer-root", displayName: "Alice" });
+
+    saveReply(db, {
+      parentId,
+      viewerId: "viewer-reply-1",
+      displayName: "Bob",
+      body: "Reply one",
+      spoiler: false,
+    });
+
+    saveReply(db, {
+      parentId,
+      viewerId: "viewer-reply-2",
+      displayName: "Carol",
+      body: "Reply two",
+      spoiler: true,
+    });
+
+    const thread = listReviewThread(db, "ep-one");
+    assert.equal(thread.length, 1);
+    assert.equal(thread[0]?.review.displayName, "Alice");
+    assert.equal(thread[0]?.replies.length, 2);
+    assert.deepEqual(
+      thread[0]?.replies.map((reply) => reply.body),
+      ["Reply one", "Reply two"],
+    );
+    assert.equal(thread[0]?.replies.every((reply) => reply.stars === null), true);
+  });
+
+  it("listReviews and averageScore ignore replies", () => {
+    const db = makeDb();
+    const parentId = saveRootReview(db, {
+      viewerId: "viewer-root",
+      stars: 4,
+      body: "Root review",
+    });
+
+    saveReply(db, {
+      parentId,
+      viewerId: "viewer-reply",
+      displayName: "Bob",
+      body: "Reply only",
+      spoiler: false,
+    });
+
+    assert.equal(listReviews(db, "ep-one").length, 1);
+    assert.equal(averageScore(db, "ep-one"), 4);
   });
 });

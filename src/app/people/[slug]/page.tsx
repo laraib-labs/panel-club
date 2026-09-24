@@ -1,8 +1,11 @@
 import { notFound } from "next/navigation";
 
 import { SiteHeader } from "../../../components/site-header.tsx";
-import { loadCatalog, slugFromName, type Show } from "../../../lib/catalog.ts";
+import { loadAppCatalog, slugFromName, type Show } from "../../../lib/catalog.ts";
 import { appearances } from "../../../lib/people.ts";
+import { personMonogram } from "../../../lib/people-view.ts";
+
+export const dynamic = "force-dynamic";
 
 function coHostLabel(host: string, personName: string): string | null {
   const others = host
@@ -25,7 +28,7 @@ function formatHostedShowLabel(show: Show, personName: string, episodeCount: num
 
 export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const person = appearances(loadCatalog(), slug);
+  const person = appearances(await loadAppCatalog(), slug);
   if (!person) {
     notFound();
   }
@@ -52,7 +55,12 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
         <p className="meta">
           <a href="/people">People</a> / {person.name}
         </p>
-        <h1>{person.name}</h1>
+        <div className="people-card">
+          <span className="people-monogram" aria-hidden="true">
+            {personMonogram(person.name)}
+          </span>
+          <h1>{person.name}</h1>
+        </div>
         <section>
           <h2>Hosts</h2>
           <ul>
