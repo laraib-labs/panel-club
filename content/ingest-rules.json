@@ -1,0 +1,21 @@
+{
+  "defaultMinDurationSeconds": 480,
+  "shows": {
+    "indias-got-latent": { "titleInclude": "LATENT", "minDurationSeconds": 600 },
+    "pretty-good-roast-show": {},
+    "relationshit-advice": {},
+    "the-general-fun-game-show": {},
+    "who-let-the-drunks-out": { "titleInclude": "Drunks" },
+    "brocode-roast": { "titleInclude": "BroCode" },
+    "judge-me-if-you-can": {},
+    "lie-hard": { "titleInclude": "Lie Hard" },
+    "the-nation-wants-to-guess": {},
+    "madhur-model": {},
+    "andha-pyaar": { "titleInclude": "Andha Pyaar" },
+    "asking-for-a-friend": {},
+    "keep-it-kaam": {},
+    "akal-ke-ghode": {},
+    "loose-emotions": { "titleInclude": "Loose Emotions" },
+    "two-types-of-people": {}
+  }
+}
