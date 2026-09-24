@@ -1,15 +1,6 @@
-import { mkdirSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { DatabaseSync } from "node:sqlite";
 import type pg from "pg";
 
-import {
-  catalogToView,
-  ensureCatalogSchema,
-  loadIngestRules,
-  loadSeedCatalog,
-  seedCatalog,
-} from "../platform/catalog-db.ts";
+import { loadSeedCatalog } from "../platform/catalog-db.ts";
 import { createCatalogPool } from "../platform/pg.ts";
 
 export type EpisodeStatus = "aired" | "upcoming";
@@ -90,19 +81,10 @@ export function loadCatalog(): Catalog {
   return loadSeedCatalog();
 }
 
-export function catalogDbPath(): string {
-  const dataDir = process.env.RAILWAY_VOLUME_MOUNT_PATH ?? join(process.cwd(), "data");
-  return join(dataDir, "panel-club-catalog.sqlite");
-}
-
-export function catalogUsesPostgres(): boolean {
-  return Boolean(process.env.DATABASE_URL);
-}
-
 function getCatalogPool(): pg.Pool {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
-    throw new Error("DATABASE_URL is required for Postgres catalog");
+    throw new Error("DATABASE_URL is required for loadAppCatalog()");
   }
 
   if (!catalogPool) {
@@ -217,31 +199,8 @@ async function catalogToViewPg(pool: pg.Pool): Promise<Catalog> {
   );
 }
 
-function openCatalogDb(): DatabaseSync {
-  const dbPath = catalogDbPath();
-  mkdirSync(dirname(dbPath), { recursive: true });
-  const db = new DatabaseSync(dbPath);
-  ensureCatalogSchema(db);
-
-  const count = db.prepare("SELECT COUNT(*) AS n FROM shows").get() as { n: number };
-  if (count.n === 0) {
-    seedCatalog(db, loadSeedCatalog(), loadIngestRules());
-  }
-
-  return db;
-}
-
 export async function loadAppCatalog(): Promise<Catalog> {
-  if (catalogUsesPostgres()) {
-    return catalogToViewPg(getCatalogPool());
-  }
-
-  const db = openCatalogDb();
-  try {
-    return catalogToView(db);
-  } finally {
-    db.close();
-  }
+  return catalogToViewPg(getCatalogPool());
 }
 
 export function getShow(catalog: Catalog, slug: string): Show | undefined {

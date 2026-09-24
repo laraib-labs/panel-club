@@ -31,6 +31,37 @@ export type FetchLike = (input: string) => Promise<{
 const API_BASE = "https://www.googleapis.com/youtube/v3";
 const RSS_BASE = "https://www.youtube.com/feeds/videos.xml";
 
+type FetchResponse = Awaited<ReturnType<FetchLike>>;
+
+function isRetryableStatus(status: number): boolean {
+  return status === 429 || (status >= 500 && status < 600);
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchWithRetry(fetchImpl: FetchLike, url: string, maxAttempts = 5): Promise<FetchResponse> {
+  let delayMs = 500;
+  let lastResponse: FetchResponse | null = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const response = await fetchImpl(url);
+    lastResponse = response;
+    if (response.ok || !isRetryableStatus(response.status)) {
+      return response;
+    }
+    if (attempt === maxAttempts) {
+      return response;
+    }
+    await sleep(delayMs);
+    delayMs = Math.min(delayMs * 2, 8000);
+  }
+
+  return lastResponse!;
+}
+
+
 type PlaylistItemsResponse = {
   items?: Array<{
     snippet?: {
@@ -112,7 +143,7 @@ async function resolvePlaylistId(
     throw new Error("source has no playlist, channel id, or handle");
   }
 
-  const response = await fetchImpl(`${API_BASE}/channels?${params.toString()}`);
+  const response = await fetchWithRetry(fetchImpl, `${API_BASE}/channels?${params.toString()}`);
   if (!response.ok) {
     throw new Error(`channels.list failed: ${response.status}`);
   }
@@ -138,28 +169,28 @@ async function listPlaylistItems(
     maxResults: String(maxResults),
     key: apiKey,
   });
-  const response = await fetchImpl(`${API_BASE}/playlistItems?${params.toString()}`);
+  const response = await fetchWithRetry(fetchImpl, `${API_BASE}/playlistItems?${params.toString()}`);
   if (!response.ok) {
     throw new Error(`playlistItems.list failed: ${response.status}`);
   }
 
   const body = (await response.json()) as PlaylistItemsResponse;
-  return (body.items ?? [])
-    .map((item) => {
-      const videoId = item.contentDetails?.videoId ?? item.snippet?.resourceId?.videoId;
-      const title = item.snippet?.title ?? "";
-      if (!videoId || title.length === 0) {
-        return null;
-      }
+  return (body.items ?? []).flatMap((item): YoutubeVideo[] => {
+    const videoId = item.contentDetails?.videoId ?? item.snippet?.resourceId?.videoId;
+    const title = item.snippet?.title ?? "";
+    if (!videoId || title.length === 0) {
+      return [];
+    }
 
-      return {
+    return [
+      {
         videoId,
         title,
         publishedAt: item.snippet?.publishedAt ?? null,
         durationSeconds: null,
-      };
-    })
-    .filter((item): item is YoutubeVideo => item !== null);
+      },
+    ];
+  });
 }
 
 async function enrichVideos(
@@ -176,7 +207,7 @@ async function enrichVideos(
     id: videos.map((video) => video.videoId).join(","),
     key: apiKey,
   });
-  const response = await fetchImpl(`${API_BASE}/videos?${params.toString()}`);
+  const response = await fetchWithRetry(fetchImpl, `${API_BASE}/videos?${params.toString()}`);
   if (!response.ok) {
     return videos;
   }
@@ -222,7 +253,7 @@ async function enrichVideos(
 }
 
 async function readFeed(fetchImpl: FetchLike, url: string): Promise<string> {
-  const response = await fetchImpl(url);
+  const response = await fetchWithRetry(fetchImpl, url);
   if (!response.ok) {
     throw new Error(`RSS fetch failed: ${response.status}`);
   }

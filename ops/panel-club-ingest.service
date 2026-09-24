@@ -1,14 +1,13 @@
 [Unit]
-Description=Panel Club YouTube catalog ingest (Neon)
-After=network-online.target
+Description=Panel Club YouTube catalog ingest (Docker / Neon)
+After=network-online.target docker.service
 Wants=network-online.target
+Requires=docker.service
 
 [Service]
 Type=oneshot
-WorkingDirectory=/opt/panel-club
 EnvironmentFile=/etc/panel-club.env
-# Node 22+ required (package.json engines). Install via distro or fnm/nvm with /usr/bin/node on PATH.
-ExecStart=/usr/bin/node --experimental-strip-types src/platform/ingest/cli.ts
+ExecStart=/bin/sh -c '/usr/bin/docker pull ghcr.io/laraib-labs/panel-club-ingest:latest && /usr/bin/docker run --rm --env-file /etc/panel-club.env ghcr.io/laraib-labs/panel-club-ingest:latest'
 
 [Install]
 WantedBy=multi-user.target

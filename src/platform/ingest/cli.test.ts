@@ -16,7 +16,7 @@ import {
 } from "../catalog-db.ts";
 import { REFRESH_SHOW_COVER_VIDEO_SQL } from "../catalog-ingest-pg.ts";
 import { directCatalogDatabaseUrl, ingestUsesPostgres } from "./cli.ts";
-import { createPgIngestDeps, runIngestPg } from "./run-pg.ts";
+import { createPgIngestDeps, runIngestPg, type PgIngestDeps } from "./run-pg.ts";
 import type { YoutubeClient } from "../youtube/client.ts";
 
 describe("ingest cli", () => {
@@ -52,7 +52,7 @@ describe("runIngestPg", () => {
     const db = openMemoryCatalogDb();
     seedCatalog(db, loadSeedCatalog(), loadIngestRules());
 
-    const deps = {
+    const deps: PgIngestDeps = {
       listActiveSources: async () => listActiveSources(db),
       startIngestRun: async () => startIngestRun(db),
       finishIngestRun: async (runId, stats) => finishIngestRun(db, runId, stats),

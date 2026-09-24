@@ -230,7 +230,6 @@ describe("runIngest", () => {
         publishedAt: null,
         durationSeconds: 45,
       },
-      false,
     );
     assert.equal(decision.status, "skipped");
     assert.equal(decision.detail, "minDuration");
