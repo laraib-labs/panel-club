@@ -60,7 +60,7 @@ async function findRootReviewId(
   const result = await pool.query<{ id: string }>(
     `
     SELECT id
-    FROM reviews
+    FROM panel_club.reviews
     WHERE episode_id = $1
       AND viewer_id = $2
       AND parent_id IS NULL
@@ -75,7 +75,7 @@ async function getReviewById(pool: pg.Pool, id: string): Promise<Review | null> 
   const result = await pool.query<PgReviewRow>(
     `
     SELECT ${REVIEW_COLUMNS}
-    FROM reviews
+    FROM panel_club.reviews
     WHERE id = $1
   `,
     [id],
@@ -93,7 +93,7 @@ async function countViewerRepliesOnEpisode(
   const result = await pool.query<{ count: string }>(
     `
     SELECT COUNT(*)::text AS count
-    FROM reviews
+    FROM panel_club.reviews
     WHERE episode_id = $1
       AND viewer_id = $2
       AND parent_id IS NOT NULL
@@ -123,7 +123,7 @@ export async function saveReview(
   if (existingId) {
     await pool.query(
       `
-      UPDATE reviews
+      UPDATE panel_club.reviews
       SET
         display_name = $1,
         stars = $2,
@@ -139,7 +139,7 @@ export async function saveReview(
 
   await pool.query(
     `
-    INSERT INTO reviews (
+    INSERT INTO panel_club.reviews (
       id,
       episode_id,
       viewer_id,
@@ -191,7 +191,7 @@ export async function saveReply(pool: pg.Pool, input: SaveReplyInput): Promise<R
 
   await pool.query(
     `
-    INSERT INTO reviews (
+    INSERT INTO panel_club.reviews (
       id,
       episode_id,
       viewer_id,
@@ -232,7 +232,7 @@ export async function listReviews(pool: pg.Pool, episodeId: string): Promise<Rev
   const result = await pool.query<PgReviewRow>(
     `
     SELECT ${REVIEW_COLUMNS}
-    FROM reviews
+    FROM panel_club.reviews
     WHERE episode_id = $1
       AND parent_id IS NULL
     ORDER BY created_at DESC
@@ -251,7 +251,7 @@ export async function listReviewThread(pool: pg.Pool, episodeId: string): Promis
     const result = await pool.query<PgReviewRow>(
       `
       SELECT ${REVIEW_COLUMNS}
-      FROM reviews
+      FROM panel_club.reviews
       WHERE parent_id = $1
       ORDER BY created_at ASC
     `,
@@ -271,7 +271,7 @@ export async function averageScore(pool: pg.Pool, episodeId: string): Promise<nu
   const result = await pool.query<{ average: string | null }>(
     `
     SELECT AVG(stars)::text AS average
-    FROM reviews
+    FROM panel_club.reviews
     WHERE episode_id = $1
       AND parent_id IS NULL
   `,
