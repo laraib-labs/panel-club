@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { catalogSchemaName } from "./schema.ts";
 import {
   catalogToView,
   hasEpisode,
@@ -12,12 +11,6 @@ import {
 } from "./catalog-db.ts";
 import { decideVideo, deriveEpisodeFields, runIngest } from "./ingest/run.ts";
 import type { YoutubeClient } from "./youtube/client.ts";
-
-describe("schema names", () => {
-  it("defaults to panel_club_test outside production", () => {
-    assert.equal(catalogSchemaName(), "panel_club_test");
-  });
-});
 
 describe("catalog seed", () => {
   it("creates the nine locked tables", () => {

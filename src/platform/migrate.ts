@@ -3,12 +3,11 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 
-import { catalogSchemaName, SQLITE_CATALOG_DDL } from "./schema.ts";
+import { SQLITE_CATALOG_DDL } from "./schema.ts";
 
 const migrationsDir = join(dirname(fileURLToPath(import.meta.url)), "../../docs/sql/migrations");
 const SQLITE_MIGRATION_ID = "001_init";
 
-export { catalogSchemaName };
 
 export function listMigrationIds(dir = migrationsDir): string[] {
   return readdirSync(dir)
@@ -39,19 +38,8 @@ export type SqlQuery = (
   params?: unknown[],
 ) => Promise<{ rows: Array<Record<string, unknown>> }>;
 
-function assertSafeSchemaName(name: string): string {
-  if (!/^[a-z][a-z0-9_]*$/.test(name)) {
-    throw new Error(`unsafe schema name: ${name}`);
-  }
-
-  return name;
-}
 
 export async function migratePostgres(query: SqlQuery): Promise<string[]> {
-  const schema = assertSafeSchemaName(catalogSchemaName());
-  await query(`CREATE SCHEMA IF NOT EXISTS ${schema}`);
-  await query(`SET search_path TO ${schema}, public`);
-
   const applied: string[] = [];
   for (const id of listMigrationIds()) {
     if (await migrationRecorded(query, id)) {
@@ -89,7 +77,7 @@ if (isMain) {
   const pool = new Pool({ connectionString: url });
   try {
     const applied = await migratePostgres((sql, params) => pool.query(sql, params));
-    console.log(JSON.stringify({ schema: catalogSchemaName(), applied }));
+    console.log(JSON.stringify({ applied }));
   } finally {
     await pool.end();
   }

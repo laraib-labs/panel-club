@@ -4,7 +4,6 @@ import { DatabaseSync } from "node:sqlite";
 import { NextResponse } from "next/server";
 
 import { ensureCatalogSchema, loadIngestRules, loadSeedCatalog, seedCatalog } from "../../../../platform/catalog-db.ts";
-import { catalogSchemaName } from "../../../../platform/schema.ts";
 import { createYoutubeClient } from "../../../../platform/youtube/client.ts";
 import { runIngest } from "../../../../platform/ingest/run.ts";
 
@@ -35,7 +34,7 @@ export async function POST(request: Request): Promise<Response> {
         apiKey: process.env.YOUTUBE_API_KEY,
       }),
     );
-    return NextResponse.json({ schema: catalogSchemaName(), ...stats });
+    return NextResponse.json(stats);
   } finally {
     db.close();
   }

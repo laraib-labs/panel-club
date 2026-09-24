@@ -6,8 +6,6 @@ import {
   applySqliteCatalogSchema,
   listMigrationIds,
 } from "./migrate.ts";
-import { catalogSchemaName } from "./schema.ts";
-
 const LOCKED_TABLES = [
   "episode_credits",
   "episodes",
@@ -20,37 +18,6 @@ const LOCKED_TABLES = [
   "shows",
   "sources",
 ];
-
-describe("catalogSchemaName", () => {
-  it("defaults to panel_club_test outside production", () => {
-    const previous = process.env.CATALOG_SCHEMA;
-    delete process.env.CATALOG_SCHEMA;
-    try {
-      assert.notEqual(process.env.NODE_ENV, "production");
-      assert.equal(catalogSchemaName(), "panel_club_test");
-    } finally {
-      if (previous === undefined) {
-        delete process.env.CATALOG_SCHEMA;
-      } else {
-        process.env.CATALOG_SCHEMA = previous;
-      }
-    }
-  });
-
-  it("honors CATALOG_SCHEMA", () => {
-    const previous = process.env.CATALOG_SCHEMA;
-    process.env.CATALOG_SCHEMA = "panel_club";
-    try {
-      assert.equal(catalogSchemaName(), "panel_club");
-    } finally {
-      if (previous === undefined) {
-        delete process.env.CATALOG_SCHEMA;
-      } else {
-        process.env.CATALOG_SCHEMA = previous;
-      }
-    }
-  });
-});
 
 describe("migrations", () => {
   it("lists numbered SQL migrations including 001_init", () => {

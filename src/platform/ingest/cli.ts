@@ -4,7 +4,6 @@ import { DatabaseSync } from "node:sqlite";
 
 import { ensureCatalogSchema, loadIngestRules, loadSeedCatalog, seedCatalog } from "../catalog-db.ts";
 import { createCatalogPool } from "../pg.ts";
-import { catalogSchemaName } from "../schema.ts";
 import { createYoutubeClient } from "../youtube/client.ts";
 import { runIngestPg } from "./run-pg.ts";
 import { runIngest, type IngestStats } from "./run.ts";
@@ -41,13 +40,11 @@ function openFileCatalogDb(): DatabaseSync {
 }
 
 export type IngestCliResult = IngestStats & {
-  schema: string;
   db?: string;
   backend: "postgres" | "sqlite";
 };
 
 export async function runIngestCli(): Promise<IngestCliResult> {
-  const schema = catalogSchemaName();
   const youtube = createYoutubeClient({
     fetch: globalThis.fetch,
     apiKey: process.env.YOUTUBE_API_KEY,
@@ -58,7 +55,7 @@ export async function runIngestCli(): Promise<IngestCliResult> {
     const pool = createCatalogPool(directCatalogDatabaseUrl(databaseUrl));
     try {
       const stats = await runIngestPg(pool, youtube);
-      return { schema, backend: "postgres", ...stats };
+      return { backend: "postgres", ...stats };
     } finally {
       await pool.end();
     }
@@ -67,7 +64,7 @@ export async function runIngestCli(): Promise<IngestCliResult> {
   const db = openFileCatalogDb();
   try {
     const stats = await runIngest(db, youtube);
-    return { schema, backend: "sqlite", db: catalogDbPath(), ...stats };
+    return { backend: "sqlite", db: catalogDbPath(), ...stats };
   } finally {
     db.close();
   }

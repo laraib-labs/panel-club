@@ -1,11 +1,3 @@
-export function catalogSchemaName(): string {
-  if (process.env.CATALOG_SCHEMA && process.env.CATALOG_SCHEMA.length > 0) {
-    return process.env.CATALOG_SCHEMA;
-  }
-
-  return process.env.NODE_ENV === "production" ? "panel_club" : "panel_club_test";
-}
-
 export const SQLITE_CATALOG_DDL = `
 CREATE TABLE IF NOT EXISTS schema_migrations (
   id TEXT PRIMARY KEY,
