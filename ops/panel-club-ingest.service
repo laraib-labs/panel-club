@@ -1,0 +1,14 @@
+[Unit]
+Description=Panel Club YouTube catalog ingest (Neon)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/panel-club
+EnvironmentFile=/etc/panel-club.env
+# Node 22+ required (package.json engines). Install via distro or fnm/nvm with /usr/bin/node on PATH.
+ExecStart=/usr/bin/node --experimental-strip-types src/platform/ingest/cli.ts
+
+[Install]
+WantedBy=multi-user.target
