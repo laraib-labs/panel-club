@@ -1,6 +1,16 @@
-import { readFileSync } from "node:fs";
+import { mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { DatabaseSync } from "node:sqlite";
+import type pg from "pg";
+
+import {
+  catalogToView,
+  ensureCatalogSchema,
+  loadIngestRules,
+  loadSeedCatalog,
+  seedCatalog,
+} from "../platform/catalog-db.ts";
+import { createCatalogPool } from "../platform/pg.ts";
 
 export type EpisodeStatus = "aired" | "upcoming";
 
@@ -30,7 +40,36 @@ export type Catalog = {
   shows: Show[];
 };
 
-const catalogPath = join(dirname(fileURLToPath(import.meta.url)), "../../content/catalog.json");
+let catalogPool: pg.Pool | null = null;
+
+type ShowRow = {
+  slug: string;
+  name: string;
+  category: string;
+  description: string;
+  cover_video_id: string;
+  checked_at: string;
+  availability_note: string;
+};
+
+type EpisodeRow = {
+  id: string;
+  show_slug: string;
+  youtube_video_id: string | null;
+  title: string;
+  duration_seconds: number;
+  status: "aired" | "upcoming";
+  premieres_at: string | null;
+  media_url: string | null;
+};
+
+type SourceRow = {
+  show_slug: string;
+  kind: "playlist" | "channel";
+  playlist_id: string | null;
+  channel_id: string | null;
+  handle: string | null;
+};
 
 export function slugFromName(name: string): string {
   return name
@@ -42,9 +81,167 @@ export function slugFromName(name: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
+/** JSON seed reader for unit tests only (no DATABASE_URL). */
 export function loadCatalog(): Catalog {
-  const raw = readFileSync(catalogPath, "utf8");
-  return JSON.parse(raw) as Catalog;
+  if (process.env.DATABASE_URL) {
+    throw new Error("loadCatalog() is test-only; use loadAppCatalog() when DATABASE_URL is set");
+  }
+
+  return loadSeedCatalog();
+}
+
+export function catalogDbPath(): string {
+  const dataDir = process.env.RAILWAY_VOLUME_MOUNT_PATH ?? join(process.cwd(), "data");
+  return join(dataDir, "panel-club-catalog.sqlite");
+}
+
+export function catalogUsesPostgres(): boolean {
+  return Boolean(process.env.DATABASE_URL);
+}
+
+function getCatalogPool(): pg.Pool {
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    throw new Error("DATABASE_URL is required for Postgres catalog");
+  }
+
+  if (!catalogPool) {
+    catalogPool = createCatalogPool(connectionString);
+  }
+
+  return catalogPool;
+}
+
+function sourceUrlFromRow(row: SourceRow): string {
+  if (row.playlist_id) {
+    return `https://www.youtube.com/playlist?list=${row.playlist_id}`;
+  }
+
+  if (row.handle) {
+    return `https://www.youtube.com/@${row.handle}/videos`;
+  }
+
+  if (row.channel_id) {
+    return `https://www.youtube.com/channel/${row.channel_id}`;
+  }
+
+  return "";
+}
+
+function catalogToViewFromRows(
+  shows: ShowRow[],
+  episodes: EpisodeRow[],
+  sources: SourceRow[],
+  hosts: Array<{ show_slug: string; name: string }>,
+  guests: Array<{ episode_id: string; name: string }>,
+): Catalog {
+  const hostsByShow = new Map<string, string[]>();
+  for (const row of hosts) {
+    const list = hostsByShow.get(row.show_slug) ?? [];
+    list.push(row.name);
+    hostsByShow.set(row.show_slug, list);
+  }
+
+  const guestsByEpisode = new Map<string, string[]>();
+  for (const row of guests) {
+    const list = guestsByEpisode.get(row.episode_id) ?? [];
+    list.push(row.name);
+    guestsByEpisode.set(row.episode_id, list);
+  }
+
+  const sourceByShow = new Map<string, SourceRow>();
+  for (const row of sources) {
+    if (!sourceByShow.has(row.show_slug)) {
+      sourceByShow.set(row.show_slug, row);
+    }
+  }
+
+  const byShow = new Map<string, Episode[]>();
+  for (const episode of episodes) {
+    const videoId = episode.youtube_video_id ?? episode.id;
+    const list = byShow.get(episode.show_slug) ?? [];
+    list.push({
+      title: episode.title,
+      videoId,
+      guest: (guestsByEpisode.get(episode.id) ?? []).join(", "),
+      duration: episode.duration_seconds,
+      status: episode.status,
+      premieresAt: episode.premieres_at ?? undefined,
+      mediaUrl: episode.media_url,
+    });
+    byShow.set(episode.show_slug, list);
+  }
+
+  return {
+    shows: shows.map((show): Show => ({
+      name: show.name,
+      host: (hostsByShow.get(show.slug) ?? []).join(" & "),
+      category: show.category,
+      description: show.description,
+      coverVideoId: show.cover_video_id,
+      sourceUrl: sourceByShow.has(show.slug) ? sourceUrlFromRow(sourceByShow.get(show.slug) as SourceRow) : "",
+      checkedAt: show.checked_at,
+      availabilityNote: show.availability_note,
+      episodes: byShow.get(show.slug) ?? [],
+    })),
+  };
+}
+
+async function catalogToViewPg(pool: pg.Pool): Promise<Catalog> {
+  const [showsResult, episodesResult, sourcesResult, hostsResult, guestsResult] = await Promise.all([
+    pool.query<ShowRow>("SELECT * FROM shows ORDER BY name"),
+    pool.query<EpisodeRow>("SELECT * FROM episodes"),
+    pool.query<SourceRow>("SELECT show_slug, kind, playlist_id, channel_id, handle FROM sources"),
+    pool.query<{ show_slug: string; name: string }>(`
+      SELECT sc.show_slug, p.name
+      FROM show_credits sc
+      JOIN people p ON p.slug = sc.person_slug
+      WHERE sc.role = 'host'
+      ORDER BY sc.show_slug, p.name
+    `),
+    pool.query<{ episode_id: string; name: string }>(`
+      SELECT ec.episode_id, p.name
+      FROM episode_credits ec
+      JOIN people p ON p.slug = ec.person_slug
+      WHERE ec.role = 'guest'
+      ORDER BY ec.episode_id, p.name
+    `),
+  ]);
+
+  return catalogToViewFromRows(
+    showsResult.rows,
+    episodesResult.rows,
+    sourcesResult.rows,
+    hostsResult.rows,
+    guestsResult.rows,
+  );
+}
+
+function openCatalogDb(): DatabaseSync {
+  const dbPath = catalogDbPath();
+  mkdirSync(dirname(dbPath), { recursive: true });
+  const db = new DatabaseSync(dbPath);
+  ensureCatalogSchema(db);
+
+  const count = db.prepare("SELECT COUNT(*) AS n FROM shows").get() as { n: number };
+  if (count.n === 0) {
+    seedCatalog(db, loadSeedCatalog(), loadIngestRules());
+  }
+
+  return db;
+}
+
+export async function loadAppCatalog(): Promise<Catalog> {
+  if (catalogUsesPostgres()) {
+    return catalogToViewPg(getCatalogPool());
+  }
+
+  const db = openCatalogDb();
+  try {
+    return catalogToView(db);
+  } finally {
+    db.close();
+  }
 }
 
 export function getShow(catalog: Catalog, slug: string): Show | undefined {

@@ -1,9 +1,11 @@
 import { LibraryBrowser } from "../../components/library-list.tsx";
 import { SiteHeader } from "../../components/site-header.tsx";
-import { loadCatalog, slugFromName } from "../../lib/catalog.ts";
+import { loadAppCatalog, slugFromName } from "../../lib/catalog.ts";
 
-export default function Page() {
-  const catalog = loadCatalog();
+export const dynamic = "force-dynamic";
+
+export default async function Page() {
+  const catalog = await loadAppCatalog();
   const episodes = catalog.shows.flatMap((show) => {
     const slug = slugFromName(show.name);
     return show.episodes.map((episode) => ({

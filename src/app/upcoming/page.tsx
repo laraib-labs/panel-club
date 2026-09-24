@@ -1,10 +1,12 @@
 import { Schedule } from "../../components/schedule.tsx";
 import { SiteHeader } from "../../components/site-header.tsx";
-import { loadCatalog } from "../../lib/catalog.ts";
+import { loadAppCatalog } from "../../lib/catalog.ts";
 import { splitSchedule } from "../../lib/schedule.ts";
 
-export default function UpcomingPage() {
-  const catalog = loadCatalog();
+export const dynamic = "force-dynamic";
+
+export default async function UpcomingPage() {
+  const catalog = await loadAppCatalog();
   const schedule = splitSchedule(catalog);
 
   return (

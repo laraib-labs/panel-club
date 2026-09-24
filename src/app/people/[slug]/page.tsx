@@ -1,9 +1,11 @@
 import { notFound } from "next/navigation";
 
 import { SiteHeader } from "../../../components/site-header.tsx";
-import { loadCatalog, slugFromName, type Show } from "../../../lib/catalog.ts";
+import { loadAppCatalog, slugFromName, type Show } from "../../../lib/catalog.ts";
 import { appearances } from "../../../lib/people.ts";
 import { personMonogram } from "../../../lib/people-view.ts";
+
+export const dynamic = "force-dynamic";
 
 function coHostLabel(host: string, personName: string): string | null {
   const others = host
@@ -26,7 +28,7 @@ function formatHostedShowLabel(show: Show, personName: string, episodeCount: num
 
 export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const person = appearances(loadCatalog(), slug);
+  const person = appearances(await loadAppCatalog(), slug);
   if (!person) {
     notFound();
   }

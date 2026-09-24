@@ -10,7 +10,7 @@ import {
   openMemoryCatalogDb,
   seedCatalog,
 } from "./catalog-db.ts";
-import { decideVideo, runIngest } from "./ingest/run.ts";
+import { decideVideo, deriveEpisodeFields, runIngest } from "./ingest/run.ts";
 import type { YoutubeClient } from "./youtube/client.ts";
 
 describe("schema names", () => {
@@ -80,7 +80,7 @@ describe("catalog seed", () => {
 });
 
 describe("runIngest", () => {
-  it("inserts a new matching video and skips duplicates and chess uploads", async () => {
+  it("inserts a new matching video, upserts existing rows, and skips chess uploads", async () => {
     const db = openMemoryCatalogDb();
     seedCatalog(db, loadSeedCatalog(), loadIngestRules());
 
@@ -115,6 +115,7 @@ describe("runIngest", () => {
 
     const first = await runIngest(db, youtube);
     assert.equal(first.inserted, 1);
+    assert.equal(first.updated, 1);
     assert.equal(hasEpisode(db, "brandNewLatent"), true);
 
     const view = catalogToView(db);
@@ -122,9 +123,101 @@ describe("runIngest", () => {
     assert.equal(latent?.episodes.length, 8);
     const fresh = latent?.episodes.find((episode) => episode.videoId === "brandNewLatent");
     assert.equal(fresh?.guest, "Fresh Guest");
+    assert.equal(latent?.coverVideoId, "brandNewLatent");
 
     const second = await runIngest(db, youtube);
     assert.equal(second.inserted, 0);
+    assert.equal(second.updated, 2);
+  });
+
+  it("updates title on the same youtube id", async () => {
+    const db = openMemoryCatalogDb();
+    seedCatalog(db, loadSeedCatalog(), loadIngestRules());
+
+    let title = "INDIA’S GOT LATENT S2 EP8 ft. Fresh Guest";
+    const youtube: YoutubeClient = {
+      async listLatest(source) {
+        if (source.handle === "SamayRainaOfficial") {
+          return [
+            {
+              videoId: "brandNewLatent",
+              title,
+              publishedAt: "2026-09-24T00:00:00Z",
+              durationSeconds: 3200,
+            },
+          ];
+        }
+        return [];
+      },
+    };
+
+    await runIngest(db, youtube);
+    title = "INDIA’S GOT LATENT S2 EP8 ft. Renamed Guest";
+    const second = await runIngest(db, youtube);
+    assert.equal(second.updated, 1);
+
+    const row = db.prepare("SELECT title FROM episodes WHERE youtube_video_id = ?").get("brandNewLatent") as {
+      title: string;
+    };
+    assert.match(row.title, /Renamed Guest/);
+  });
+
+  it("maps premieres to upcoming and marks missing API ids unpublished", async () => {
+    const db = openMemoryCatalogDb();
+    seedCatalog(db, loadSeedCatalog(), loadIngestRules());
+
+    const youtube: YoutubeClient = {
+      async listLatest(source) {
+        if (source.handle === "SamayRainaOfficial") {
+          return [
+            {
+              videoId: "premiereSoon",
+              title: "INDIA’S GOT LATENT S2 EP9",
+              publishedAt: "2026-09-24T00:00:00Z",
+              durationSeconds: 0,
+              liveBroadcastContent: "upcoming",
+              scheduledStartTime: "2026-10-04T18:00:00Z",
+            },
+            {
+              videoId: "gonePrivate",
+              title: "INDIA’S GOT LATENT removed",
+              publishedAt: "2026-08-01T00:00:00Z",
+              durationSeconds: 3000,
+              missingFromApi: true,
+            },
+          ];
+        }
+        return [];
+      },
+    };
+
+    const stats = await runIngest(db, youtube);
+    assert.equal(stats.inserted, 2);
+    assert.equal(stats.unpublished, 1);
+
+    const premiere = db.prepare(
+      "SELECT status, premieres_at, unpublished FROM episodes WHERE youtube_video_id = ?",
+    ).get("premiereSoon") as { status: string; premieres_at: string; unpublished: number };
+    assert.equal(premiere.status, "upcoming");
+    assert.equal(premiere.premieres_at, "2026-10-04");
+    assert.equal(premiere.unpublished, 0);
+
+    const removed = db.prepare("SELECT unpublished FROM episodes WHERE youtube_video_id = ?").get("gonePrivate") as {
+      unpublished: number;
+    };
+    assert.equal(removed.unpublished, 1);
+  });
+
+  it("derives upcoming from future scheduled start times", () => {
+    const fields = deriveEpisodeFields({
+      videoId: "x",
+      title: "LATENT",
+      publishedAt: null,
+      durationSeconds: null,
+      scheduledStartTime: "2099-01-01T12:00:00Z",
+    });
+    assert.equal(fields.status, "upcoming");
+    assert.equal(fields.premieresAt, "2099-01-01");
   });
 
   it("rejects channel videos under the duration floor", () => {

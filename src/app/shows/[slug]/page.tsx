@@ -1,21 +1,33 @@
-import type { DatabaseSync } from "node:sqlite";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { SiteHeader } from "../../../components/site-header.tsx";
-import { getShow, loadCatalog, slugFromName, type Show } from "../../../lib/catalog.ts";
-import { openReviewsDb } from "../../../lib/reviews-db.ts";
-import { averageScore, listReviews } from "../../../lib/reviews.ts";
+import { getShow, loadAppCatalog, slugFromName, type Show } from "../../../lib/catalog.ts";
+import { getReviewsPool, openReviewsDb, reviewsUsesPostgres } from "../../../lib/reviews-db.ts";
+import { averageScore, averageScorePg, listReviews, listReviewsPg } from "../../../lib/reviews.ts";
 import { youtubeThumbUrl } from "../../../lib/thumbs.ts";
 
-function showScoreSummary(db: DatabaseSync, show: Show): { average: number | null; reviewCount: number } {
+export const dynamic = "force-dynamic";
+
+async function showScoreSummary(show: Show): Promise<{ average: number | null; reviewCount: number }> {
   let total = 0;
   let count = 0;
 
-  for (const episode of show.episodes) {
-    for (const review of listReviews(db, episode.videoId)) {
-      total += review.stars;
-      count += 1;
+  if (reviewsUsesPostgres()) {
+    const pool = getReviewsPool();
+    for (const episode of show.episodes) {
+      for (const review of await listReviewsPg(pool, episode.videoId)) {
+        total += review.stars ?? 0;
+        count += 1;
+      }
+    }
+  } else {
+    const db = openReviewsDb();
+    for (const episode of show.episodes) {
+      for (const review of listReviews(db, episode.videoId)) {
+        total += review.stars ?? 0;
+        count += 1;
+      }
     }
   }
 
@@ -62,16 +74,36 @@ type ShowPageProps = {
 
 export default async function ShowPage({ params }: ShowPageProps) {
   const { slug } = await params;
-  const catalog = loadCatalog();
+  const catalog = await loadAppCatalog();
   const show = getShow(catalog, slug);
 
   if (!show) {
     notFound();
   }
 
-  const db = openReviewsDb();
-  const score = showScoreSummary(db, show);
+  const score = await showScoreSummary(show);
   const scorePill = formatScorePill(score.average);
+  const usePostgres = reviewsUsesPostgres();
+  const pool = usePostgres ? getReviewsPool() : null;
+  const db = usePostgres ? null : openReviewsDb();
+
+  const episodeRows = await Promise.all(
+    show.episodes.map(async (episode) => {
+      const episodeReviews = usePostgres
+        ? await listReviewsPg(pool as NonNullable<typeof pool>, episode.videoId)
+        : listReviews(db as NonNullable<typeof db>, episode.videoId);
+      const episodeScore = usePostgres
+        ? await averageScorePg(pool as NonNullable<typeof pool>, episode.videoId)
+        : averageScore(db as NonNullable<typeof db>, episode.videoId);
+
+      return {
+        episode,
+        episodeReviews,
+        episodeScore,
+        statusLabel: episode.status === "upcoming" ? "Upcoming" : "Aired",
+      };
+    }),
+  );
 
   return (
     <>
@@ -93,34 +125,28 @@ export default async function ShowPage({ params }: ShowPageProps) {
           Hosted by {show.host} · {show.category} · {formatShowScore(score.average, score.reviewCount)}
         </p>
         {show.availabilityNote ? <p className="note">{show.availabilityNote}</p> : null}
-        {show.episodes.map((episode) => {
-          const episodeReviews = listReviews(db, episode.videoId);
-          const episodeScore = averageScore(db, episode.videoId);
-          const statusLabel = episode.status === "upcoming" ? "Upcoming" : "Aired";
-
-          return (
-            <Link
-              key={episode.videoId}
-              className="episode-row"
-              href={`/shows/${slugFromName(show.name)}/episodes/${episode.videoId}`}
-            >
-              <div className="episode-row__thumb">
-                <img
-                  src={youtubeThumbUrl(episode.videoId)}
-                  alt={episode.title}
-                  className="episode-row__img"
-                />
-                <span className="episode-row__badge">{formatDuration(episode.duration)}</span>
-              </div>
-              <div className="episode-row__copy">
-                <strong>{episode.title}</strong>
-                <p className="meta">
-                  {formatEpisodeScore(episodeScore, episodeReviews.length)} · {statusLabel}
-                </p>
-              </div>
-            </Link>
-          );
-        })}
+        {episodeRows.map(({ episode, episodeReviews, episodeScore, statusLabel }) => (
+          <Link
+            key={episode.videoId}
+            className="episode-row"
+            href={`/shows/${slugFromName(show.name)}/episodes/${episode.videoId}`}
+          >
+            <div className="episode-row__thumb">
+              <img
+                src={youtubeThumbUrl(episode.videoId)}
+                alt={episode.title}
+                className="episode-row__img"
+              />
+              <span className="episode-row__badge">{formatDuration(episode.duration)}</span>
+            </div>
+            <div className="episode-row__copy">
+              <strong>{episode.title}</strong>
+              <p className="meta">
+                {formatEpisodeScore(episodeScore, episodeReviews.length)} · {statusLabel}
+              </p>
+            </div>
+          </Link>
+        ))}
       </div>
     </>
   );

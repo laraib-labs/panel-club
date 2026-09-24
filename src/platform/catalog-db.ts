@@ -237,18 +237,74 @@ export function insertEpisode(
     publishedAt: string | null;
   },
 ): void {
+  upsertEpisode(db, {
+    ...episode,
+    status: "aired",
+    unpublished: 0,
+    premieresAt: null,
+  });
+}
+
+export function upsertEpisode(
+  db: DatabaseSync,
+  episode: {
+    videoId: string;
+    showId: string;
+    title: string;
+    guest: string;
+    durationSeconds: number;
+    publishedAt: string | null;
+    status: "aired" | "upcoming";
+    unpublished: number;
+    premieresAt: string | null;
+  },
+): "inserted" | "updated" {
+  const existing = db
+    .prepare("SELECT id FROM episodes WHERE youtube_video_id = ? OR id = ?")
+    .get(episode.videoId, episode.videoId) as { id: string } | undefined;
+
   db.prepare(`
     INSERT INTO episodes (id, show_slug, youtube_video_id, title, duration_seconds, status, unpublished, premieres_at, media_url, published_at)
-    VALUES (?, ?, ?, ?, ?, 'aired', 0, NULL, NULL, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)
+    ON CONFLICT(youtube_video_id) DO UPDATE SET
+      title = excluded.title,
+      duration_seconds = excluded.duration_seconds,
+      status = excluded.status,
+      unpublished = excluded.unpublished,
+      premieres_at = excluded.premieres_at,
+      published_at = excluded.published_at
   `).run(
     episode.videoId,
     episode.showId,
     episode.videoId,
     episode.title,
     episode.durationSeconds,
+    episode.status,
+    episode.unpublished,
+    episode.premieresAt,
     episode.publishedAt,
   );
-  replaceEpisodeGuests(db, episode.videoId, episode.guest);
+
+  const episodeId = existing?.id ?? episode.videoId;
+  replaceEpisodeGuests(db, episodeId, episode.guest);
+  return existing ? "updated" : "inserted";
+}
+
+export function refreshShowCoverVideo(db: DatabaseSync, showId: string): void {
+  const row = db.prepare(`
+    SELECT youtube_video_id
+    FROM episodes
+    WHERE show_slug = ?
+      AND status = 'aired'
+      AND unpublished = 0
+      AND youtube_video_id IS NOT NULL
+    ORDER BY published_at IS NULL, published_at DESC, id DESC
+    LIMIT 1
+  `).get(showId) as { youtube_video_id: string } | undefined;
+
+  if (row?.youtube_video_id) {
+    db.prepare("UPDATE shows SET cover_video_id = ? WHERE slug = ?").run(row.youtube_video_id, showId);
+  }
 }
 
 export function startIngestRun(db: DatabaseSync): string {
@@ -263,11 +319,21 @@ export function startIngestRun(db: DatabaseSync): string {
 export function finishIngestRun(
   db: DatabaseSync,
   runId: string,
-  stats: { inserted: number; skipped: number; errors: number },
+  stats: { inserted: number; skipped: number; updated: number; unpublished: number; errors: number },
 ): void {
   db.prepare(`
-    UPDATE ingest_runs SET finished_at = ?, inserted = ?, skipped = ?, errors = ? WHERE id = ?
-  `).run(new Date().toISOString(), stats.inserted, stats.skipped, stats.errors, runId);
+    UPDATE ingest_runs
+    SET finished_at = ?, inserted = ?, skipped = ?, updated = ?, unpublished = ?, errors = ?
+    WHERE id = ?
+  `).run(
+    new Date().toISOString(),
+    stats.inserted,
+    stats.skipped,
+    stats.updated,
+    stats.unpublished,
+    stats.errors,
+    runId,
+  );
 }
 
 export function recordIngestItem(
