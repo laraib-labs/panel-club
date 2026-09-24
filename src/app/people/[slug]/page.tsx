@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { SiteHeader } from "../../../components/site-header.tsx";
 import { loadCatalog, slugFromName, type Show } from "../../../lib/catalog.ts";
 import { appearances } from "../../../lib/people.ts";
+import { personMonogram } from "../../../lib/people-view.ts";
 
 function coHostLabel(host: string, personName: string): string | null {
   const others = host
@@ -52,7 +53,12 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
         <p className="meta">
           <a href="/people">People</a> / {person.name}
         </p>
-        <h1>{person.name}</h1>
+        <div className="people-card">
+          <span className="people-monogram" aria-hidden="true">
+            {personMonogram(person.name)}
+          </span>
+          <h1>{person.name}</h1>
+        </div>
         <section>
           <h2>Hosts</h2>
           <ul>

@@ -1,10 +1,8 @@
 import type { Catalog, Episode, Show } from "./catalog.ts";
 import { slugFromName } from "./catalog.ts";
+import type { Person } from "./people-view.ts";
 
-export type Person = {
-  name: string;
-  slug: string;
-};
+export type { Person } from "./people-view.ts";
 
 export type EpisodeAppearance = {
   show: Show;
