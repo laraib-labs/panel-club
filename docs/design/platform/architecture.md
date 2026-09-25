@@ -56,7 +56,7 @@ src/platform/
     cli.ts                node --experimental-strip-types …
     types.ts
 
-src/app/api/jobs/ingest/  POST, Bearer CRON_SECRET
+ops/panel-club-ingest.service + src/platform/ingest/cli.ts  scheduled VPS worker
 ```
 
 Frontend stays App Router. Backend for visitors is server components querying the catalog store. Backend for the clock is the ingest job. Streaming is embed-only.
@@ -66,11 +66,10 @@ Frontend stays App Router. Backend for visitors is server components querying th
 ```mermaid
 flowchart TB
   subgraph clock [Scheduler]
-    Cron["Railway/Vercel cron<br/>or POST /api/jobs/ingest"]
+    Cron["Contabo VPS systemd timer"]
   end
 
   subgraph ingest [Ingest]
-    Auth["CRON_SECRET"]
     Run["runIngest(store, youtube)"]
     Rules["ingest-rules.json<br/>titleInclude, minDuration"]
     ParseSrc["parseSourceUrl"]
@@ -136,7 +135,7 @@ sequenceDiagram
   participant DB as episodes
   participant Audit as ingest_items
 
-  Cron->>Job: POST /api/jobs/ingest
+  Cron->>Job: run CLI on schedule
   Job->>Src: list active sources
   loop each source
     Job->>YT: latest N public videos

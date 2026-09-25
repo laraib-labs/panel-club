@@ -1,6 +1,8 @@
 export type Person = {
   name: string;
   slug: string;
+  hostedShowCount: number;
+  guestEpisodeCount: number;
 };
 
 export function personMonogram(name: string): string {

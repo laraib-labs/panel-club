@@ -11,6 +11,7 @@ import {
   listEpisodeScores,
 } from "../lib/reviews-pg.ts";
 import { splitSchedule } from "../lib/schedule.ts";
+import { ShowRail } from "../components/show-rail.tsx";
 
 export const revalidate = 300;
 
@@ -18,6 +19,7 @@ type ShowWithScore = {
   show: Show;
   slug: string;
   averageScore: number | null;
+  reviewCount: number;
 };
 
 /** Highest-rated show, falling back to the first (alphabetical) show before any reviews exist. */
@@ -30,16 +32,22 @@ function pickFeatured(shows: ShowWithScore[]): ShowWithScore {
 }
 
 export default async function HomePage() {
-  const catalog = await loadAppCatalog();
-  const scores = await listEpisodeScores(getReviewsPool());
+  const [catalog, scores] = await Promise.all([
+    loadAppCatalog(),
+    listEpisodeScores(getReviewsPool()),
+  ]);
 
-  const shows = catalog.shows.map((show) => ({
-    show,
-    slug: slugFromName(show.name),
-    averageScore: combineEpisodeScores(
+  const shows = catalog.shows.map((show) => {
+    const score = combineEpisodeScores(
       show.episodes.map((episode) => scores.get(episode.videoId) ?? emptyEpisodeScore()),
-    ).average,
-  }));
+    );
+    return {
+      show,
+      slug: slugFromName(show.name),
+      averageScore: score.average,
+      reviewCount: score.reviewCount,
+    };
+  });
 
   const featured = pickFeatured(shows);
   const featuredEpisode = featured.show.episodes[0];
@@ -53,6 +61,13 @@ export default async function HomePage() {
           <Hero show={featured.show} slug={featured.slug} episodeId={featuredEpisode.videoId} />
         ) : null}
         <UpcomingStrip entries={upcoming} />
+        <ShowRail
+          title="Community favorites"
+          entries={[...shows]
+            .filter((entry) => entry.reviewCount > 0)
+            .sort((left, right) => right.reviewCount - left.reviewCount)
+            .slice(0, 8)}
+        />
       </div>
       <Directory catalog={catalog} shows={shows} />
     </>

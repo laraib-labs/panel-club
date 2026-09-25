@@ -7,6 +7,7 @@ import {
   assertValidStars,
   reviewEpisodeExists,
   sanitizeBody,
+  sanitizeOptionalBody,
   sanitizeDisplayName,
   type Review,
   type ReviewThread,
@@ -116,7 +117,7 @@ export async function saveReview(
   assertValidStars(input.stars);
 
   const displayName = sanitizeDisplayName(input.displayName);
-  const body = sanitizeBody(input.body);
+  const body = sanitizeOptionalBody(input.body);
   const createdAt = new Date().toISOString();
   const existingId = await findRootReviewId(pool, input.episodeId, input.viewerId);
 
@@ -327,6 +328,64 @@ export async function listReviewThread(pool: pg.Pool, episodeId: string): Promis
       review,
       replies: repliesByParent.get(review.id) ?? [],
     }));
+}
+
+export type ReviewThreadPage = {
+  threads: ReviewThread[];
+  nextCursor: string | null;
+  totalCount: number;
+  averageScore: number | null;
+};
+
+export async function listReviewThreadPage(
+  pool: pg.Pool,
+  episodeId: string,
+  cursor: { createdAt: string; id: string } | null,
+  pageSize = 10,
+): Promise<ReviewThreadPage> {
+  const cursorFilter = cursor ? "AND (created_at, id) < ($2, $3)" : "";
+  const rootParams = cursor
+    ? [episodeId, cursor.createdAt, cursor.id, pageSize + 1]
+    : [episodeId, pageSize + 1];
+  const limitParam = cursor ? "$4" : "$2";
+  const [rootResult, countResult] = await Promise.all([
+    pool.query<PgReviewRow>(
+      `SELECT ${REVIEW_COLUMNS} FROM panel_club.reviews
+       WHERE episode_id = $1 AND parent_id IS NULL ${cursorFilter}
+       ORDER BY created_at DESC, id DESC LIMIT ${limitParam}`,
+      rootParams,
+    ),
+    pool.query<{ count: string; average: string | null }>(
+      "SELECT COUNT(*)::text AS count, AVG(stars)::text AS average FROM panel_club.reviews WHERE episode_id = $1 AND parent_id IS NULL",
+      [episodeId],
+    ),
+  ]);
+  const hasMore = rootResult.rows.length > pageSize;
+  const rootRows = rootResult.rows.slice(0, pageSize);
+  const roots = rootRows.map(pgRowToReview);
+  const replyResult = roots.length
+    ? await pool.query<PgReviewRow>(
+        `SELECT ${REVIEW_COLUMNS} FROM panel_club.reviews WHERE parent_id = ANY($1::text[]) ORDER BY created_at ASC, id ASC`,
+        [roots.map((root) => root.id)],
+      )
+    : { rows: [] as PgReviewRow[] };
+  const repliesByParent = new Map<string, Review[]>();
+  for (const row of replyResult.rows) {
+    const reply = pgRowToReview(row);
+    const replies = repliesByParent.get(reply.parentId!) ?? [];
+    replies.push(reply);
+    repliesByParent.set(reply.parentId!, replies);
+  }
+  const lastRoot = rootRows[rootRows.length - 1];
+  return {
+    threads: roots.map((review) => ({ review, replies: repliesByParent.get(review.id) ?? [] })),
+    nextCursor:
+      hasMore && lastRoot
+        ? Buffer.from(`${lastRoot.created_at}\n${lastRoot.id}`).toString("base64url")
+        : null,
+    totalCount: Number(countResult.rows[0]?.count ?? 0),
+    averageScore: countResult.rows[0]?.average == null ? null : Number(countResult.rows[0].average),
+  };
 }
 
 export async function averageScore(pool: pg.Pool, episodeId: string): Promise<number | null> {
