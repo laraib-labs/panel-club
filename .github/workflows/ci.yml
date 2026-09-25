@@ -22,12 +22,6 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
-    env:
-      # generateStaticParams + revalidate now prerender several routes at
-      # build time (see docs/plans/ui-rebuild.md Phase 1), so `next build`
-      # needs a real, reachable Postgres — not the unreachable placeholder
-      # this used to be, back when every route was force-dynamic.
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres?options=-c%20search_path%3Dpanel_club%2Cpublic
     steps:
       - uses: actions/checkout@v4
 
@@ -51,9 +45,15 @@ jobs:
         run: node --experimental-strip-types --test $(find src -name '*.test.ts' | sort | tr '\n' ' ')
 
       - name: Migrate + seed build database
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres?options=-c%20search_path%3Dpanel_club%2Cpublic
         run: |
           npm run db:migrate
           npm run db:seed
 
       - name: Next.js build
+        # generateStaticParams + revalidate prerender routes at build time, so
+        # this step needs the migrated, seeded Postgres service.
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres?options=-c%20search_path%3Dpanel_club%2Cpublic
         run: npx next build
