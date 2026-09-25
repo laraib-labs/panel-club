@@ -84,6 +84,22 @@ export function ensureReviewsSchema(db: DatabaseSync): void {
   db.exec(REVIEWS_TABLE);
 }
 
+/**
+ * Average of root-review stars, computed from threads already fetched by
+ * listReviewThread — avoids a second round trip to re-aggregate the same rows.
+ */
+export function averageScoreFromThreads(threads: ReviewThread[]): number | null {
+  const stars = threads
+    .map((thread) => thread.review.stars)
+    .filter((value): value is number => value !== null);
+
+  if (stars.length === 0) {
+    return null;
+  }
+
+  return stars.reduce((total, value) => total + value, 0) / stars.length;
+}
+
 export function reviewEpisodeExists(catalog: Catalog, episodeId: string): boolean {
   for (const show of catalog.shows) {
     if (getEpisode(show, episodeId)) {

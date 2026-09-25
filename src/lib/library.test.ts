@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  getLibraryRecord,
   listLibrary,
   markFinished,
   recordWatch,
@@ -33,6 +34,15 @@ describe("library", () => {
     const items = listLibrary(storage);
     assert.equal(items[0].finished, true);
     assert.equal(items[0].positionSeconds, 720);
+  });
+
+  it("getLibraryRecord returns the stored episode", () => {
+    const storage = makeStorage();
+    recordWatch(storage, "ep-9", 12);
+
+    const record = getLibraryRecord(storage, "ep-9");
+    assert.equal(record?.positionSeconds, 12);
+    assert.equal(getLibraryRecord(storage, "missing"), undefined);
   });
 
   it("toggleSave adds and removes saved flag", () => {

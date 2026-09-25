@@ -1,27 +1,83 @@
+/*
+ * `legacy` is declared first so it's the lowest-priority layer — Tailwind's
+ * own theme/base/components/utilities layers (registered by the import
+ * below) always win over anything in here, regardless of selector
+ * specificity. Without this, unlayered bare-element rules (h1-h4, a, button)
+ * silently beat every Tailwind utility targeting the same element, because
+ * unlayered CSS always outranks layered CSS per the cascade layers spec —
+ * this bit twice already (a `.grid` class collision, then `h4`'s
+ * `text-transform: uppercase` beating `normal-case`) before being caught.
+ */
+@layer legacy;
+@import "tailwindcss";
+
+/*
+ * Design tokens — "Marigold on ink" (approved redesign, docs/design/platform/
+ * redesign-2026.md). Dark, warm-black canvas; one accent color used for every
+ * action AND every rating (collapsed from the previous two-accent split —
+ * one warm color doing one job everywhere is more coherent, not less).
+ */
+@theme {
+  /* Surfaces */
+  --color-bg: #100e0b;
+  --color-bg-deep: #0a0908;
+  --color-surface: #1a1611;
+  --color-surface-raised: #251f17;
+  --color-surface-hover: #2f271b;
+  --color-border: #332b1f;
+  --color-border-subtle: #221c15;
+
+  /* Text */
+  --color-text: #f5efe1;
+  --color-text-muted: #a89a83;
+  --color-text-subtle: #6e6453;
+  --color-ink: #1a0f00;
+
+  /* Accent — the one accent, used for actions, active nav, and ratings alike */
+  --color-accent: #f0a020;
+  --color-accent-hover: #ffb84d;
+  --color-accent-muted: #3a2a10;
+
+  /* Semantic */
+  --color-danger: #e0644a;
+  --color-success: #7ee0a8;
+
+  /* Typography */
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+
+  /* Radii */
+  --radius-card: 1rem;
+  --radius-pill: 999px;
+}
+
 :root {
   color-scheme: dark;
-  --bg: #0c0b0e;
-  --surface: #17151c;
-  --surface-2: #221e28;
-  --text: #f7f0e8;
-  --muted: #a89aa8;
-  --line: #3a3140;
-  --accent: #ff2d7b;
-  --ink: #1a0810;
-  --danger: #ffb4a8;
-  --bar-height: 62px;
+
+  /* Legacy aliases — existing components reference these short names.
+     Remove once every component is rebuilt against the tokens above. */
+  --bg: var(--color-bg);
+  --surface: var(--color-surface);
+  --surface-2: var(--color-surface-raised);
+  --text: var(--color-text);
+  --muted: var(--color-text-muted);
+  --line: var(--color-border);
+  --accent: var(--color-accent);
+  --ink: var(--color-ink);
+  --danger: var(--color-danger);
+  --bar-height: 69px; /* matches the rebuilt header's rendered height */
+
+  /* Motion — shared with the Phase 4 motion pass */
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 400ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
 }
+
+@layer legacy {
 
 * {
   box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  padding-top: var(--bar-height);
-  background: #07060a;
-  color: var(--text);
-  font: 16px/1.45 ui-sans-serif, system-ui, sans-serif;
 }
 
 a {
@@ -33,50 +89,6 @@ button {
   font: inherit;
   color: inherit;
   cursor: pointer;
-}
-
-.float-bar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 10;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 18px;
-  align-items: center;
-  padding: 14px 20px;
-  background: rgba(12, 11, 14, 0.92);
-  border-bottom: 1px solid var(--line);
-  backdrop-filter: blur(12px);
-}
-
-.brand {
-  margin-right: auto;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-}
-
-.brand i {
-  display: inline-block;
-  width: 9px;
-  height: 9px;
-  margin-right: 8px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 12px var(--accent);
-}
-
-.float-bar a {
-  color: var(--muted);
-  min-height: 40px;
-  display: inline-flex;
-  align-items: center;
-}
-
-.float-bar a[aria-current="page"] {
-  color: var(--text);
-  box-shadow: inset 0 -2px 0 var(--accent);
 }
 
 .pad {
@@ -109,15 +121,11 @@ h4 {
   color: var(--muted);
 }
 
-.search-row,
-.filters {
+.search-row {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
-}
-
-.search-row {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 999px;
@@ -131,445 +139,24 @@ h4 {
 
 .search-row input {
   flex: 1;
+  min-width: 0;
   border: 0;
   background: transparent;
   color: var(--text);
   font: inherit;
   outline: none;
+  appearance: none;
 }
 
-.filter-btn,
-.pill {
-  min-height: 40px;
-  padding: 8px 14px;
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  border: 1px solid var(--line);
-  background: var(--surface);
-  cursor: pointer;
-}
-
-.filter-btn.on,
-.btn.primary {
-  background: var(--accent);
-  color: var(--ink);
-  border-color: var(--accent);
-  font-weight: 700;
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 16px;
-}
-
-/* Show cards (Discover) */
-.show-card {
-  display: grid;
-  gap: 0;
-  text-align: left;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  overflow: hidden;
-  color: inherit;
-  padding: 0 0 14px;
-}
-
-.show-card__thumb {
-  position: relative;
-  aspect-ratio: 16 / 9;
-  background: #1a1520;
-  overflow: hidden;
-}
-
-.show-card__img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.show-card__score {
-  position: absolute;
-  left: 8px;
-  top: 8px;
-  background: var(--accent);
-  color: var(--ink);
-  font-size: 12px;
-  font-weight: 800;
-  padding: 3px 8px;
-  border-radius: 6px;
-}
-
-.show-card__title {
-  margin: 10px 0 0;
-  padding: 0 14px;
-  font-size: 17px;
-  letter-spacing: -0.02em;
-  text-transform: none;
-  color: var(--text);
-}
-
-.show-card__meta {
-  margin: 0;
-  padding: 0 14px;
+.search-row input::placeholder {
   color: var(--muted);
 }
 
-/* Show cover + episode rows */
-.show-cover {
-  position: relative;
-  aspect-ratio: 16 / 9;
-  border-radius: 16px;
-  overflow: hidden;
-  background: #1a1520;
-}
-
-.show-cover__img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.show-cover__score {
-  position: absolute;
-  left: 8px;
-  top: 8px;
-  background: var(--accent);
-  color: var(--ink);
-  font-size: 12px;
-  font-weight: 800;
-  padding: 3px 8px;
-  border-radius: 6px;
-}
-
-.episode-row {
-  display: grid;
-  grid-template-columns: 160px 1fr;
-  align-items: center;
-  gap: 0;
-  text-align: left;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  overflow: hidden;
-  color: inherit;
-}
-
-.episode-row__thumb {
-  position: relative;
-  aspect-ratio: 16 / 9;
-  background: #1a1520;
-  overflow: hidden;
-}
-
-.episode-row__img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.episode-row__badge {
-  position: absolute;
-  right: 8px;
-  bottom: 8px;
-  background: rgba(0, 0, 0, 0.72);
-  color: var(--text);
-  font-size: 12px;
-  padding: 3px 8px;
-  border-radius: 6px;
-}
-
-.episode-row__copy {
-  padding: 12px 14px;
-  display: grid;
-  gap: 4px;
-}
-
-.episode-row__copy strong {
-  margin: 0;
-  font-size: 17px;
-  letter-spacing: -0.02em;
-  color: var(--text);
-}
-
-/* Legacy card/ep (schedule, people until migrated) */
-.card,
-.ep,
-.person-link {
-  padding: 14px 16px;
-  display: block;
-  border: 1px solid var(--line);
-  background: var(--surface);
-  border-radius: 16px;
-  text-decoration: none;
-}
-
-.card h4,
-.ep strong,
-.review strong {
-  margin: 0 0 4px;
-  letter-spacing: 0;
-  text-transform: none;
-  font-size: 17px;
-  color: var(--text);
-}
-
-.score {
-  color: var(--accent);
-}
-
-/* Player (episode slice — classes reserved here) */
-.player-stage {
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  border-radius: 12px;
-  background: #000 center / cover no-repeat;
-  display: grid;
-  place-items: center;
-  position: relative;
-  overflow: hidden;
-}
-
-.player-stage--dead {
-  background: var(--surface-2);
-}
-
-.player-stage__frame {
-  width: 100%;
-  height: 100%;
-  border: 0;
-}
-
-.player-play {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background: var(--accent);
-  color: var(--ink);
-  display: grid;
-  place-items: center;
-  font-size: 22px;
-  border: 0;
-}
-
-.player-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-}
-
-.player-youtube-link {
-  color: var(--accent);
-  font-weight: 650;
-}
-
-.player {
-  min-height: 240px;
-  border-radius: 16px;
-  background:
-    radial-gradient(120% 80% at 80% 0%, #3a1828 0%, transparent 55%),
-    var(--surface-2);
-  display: grid;
-  place-items: center;
-  text-align: center;
-  padding: 24px;
-}
-
-.player iframe,
-.player video {
-  width: 100%;
-  max-width: 640px;
-  aspect-ratio: 16 / 9;
-  border: 0;
-  background: #111;
-  border-radius: 12px;
-}
-
-/* People (people slice — classes reserved here) */
-.people-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 12px;
-}
-
-.people-search {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 4px 8px 4px 16px;
-  min-height: 48px;
-}
-
-.people-card {
-  display: grid;
-  grid-template-columns: 48px 1fr;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  color: inherit;
-}
-
-.people-monogram {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: var(--surface-2);
-  color: var(--accent);
-  display: grid;
-  place-items: center;
-  font-weight: 800;
-}
-
-.people-empty {
-  color: var(--muted);
-  margin: 8px 0;
-}
-
-/* Review (episode slice — classes reserved here) */
-.review-card {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 14px 16px;
-  display: grid;
-  gap: 8px;
-}
-
-.review-card__header {
-  margin: 0;
-  font-size: 17px;
-  color: var(--text);
-}
-
-.review-card__body {
-  margin: 0;
-  color: var(--muted);
-}
-
-.review-card__spoiler {
-  color: var(--accent);
-}
-
-.review-stars {
-  display: flex;
-  gap: 6px;
-}
-
-.review-star {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  border: 1px solid var(--line);
-  background: var(--surface-2);
-  color: var(--accent);
-}
-
-.review-star--on {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--ink);
-}
-
-.review-form {
-  display: grid;
-  gap: 10px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  padding: 16px;
-}
-
-.review {
-  background: var(--surface);
-  border-radius: 12px;
-  padding: 14px 16px;
-  display: grid;
-  gap: 8px;
-}
-
-/* Reply (episode slice — classes reserved here) */
-.reply-card {
-  margin-left: 20px;
-  border-left: 2px solid var(--accent);
-  padding: 10px 12px;
-  background: var(--surface-2);
-  border-radius: 0 12px 12px 0;
-}
-
-.reply-form {
-  display: grid;
-  gap: 8px;
-  margin-left: 20px;
-}
-
-.reply-list {
-  display: grid;
-  gap: 8px;
-}
-
-.form {
-  display: grid;
-  gap: 10px;
-  background: var(--surface);
-  border-radius: 16px;
-  padding: 16px;
-}
-
-.form input[type="text"],
-.form textarea {
-  width: 100%;
-  border: 1px solid var(--line);
-  background: var(--surface-2);
-  color: var(--text);
-  font: inherit;
-  padding: 10px 12px;
-  border-radius: 10px;
-}
-
-.line,
-.stars {
-  min-height: 44px;
-  border-radius: 10px;
-  border: 1px solid var(--line);
-  background: var(--bg);
-  display: flex;
-  align-items: center;
-  padding: 0 12px;
-  color: var(--muted);
-}
-
-.stars {
-  gap: 6px;
-  padding: 6px;
-}
-
-.stars button,
-.stars input {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  border: 1px solid var(--line);
-  background: transparent;
-  color: var(--accent);
-}
-
-.check {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  min-height: 40px;
+.search-row input[type="search"]::-webkit-search-decoration,
+.search-row input[type="search"]::-webkit-search-cancel-button,
+.search-row input[type="search"]::-webkit-search-results-button,
+.search-row input[type="search"]::-webkit-search-results-decoration {
+  appearance: none;
 }
 
 .note {
@@ -580,57 +167,12 @@ h4 {
   color: var(--text);
 }
 
-.empty {
-  margin: 0;
-  padding: 18px;
-  border-radius: 12px;
-  background: var(--surface);
-  color: var(--text);
-}
-
-.row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-}
-
-.crumb a {
-  color: var(--accent);
-}
-
-ul {
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 8px;
-  list-style: none;
-}
-
-ul a {
-  display: block;
-  padding: 14px 16px;
-  border: 1px solid var(--line);
-  background: var(--surface);
-  border-radius: 16px;
-}
-
 @media (max-width: 720px) {
-  .grid {
-    grid-template-columns: 1fr;
-  }
-
   h1,
   h2,
   h3 {
     font-size: 26px;
   }
+}
 
-  .float-bar {
-    gap: 12px;
-  }
-
-  .episode-row {
-    grid-template-columns: 120px 1fr;
-  }
 }

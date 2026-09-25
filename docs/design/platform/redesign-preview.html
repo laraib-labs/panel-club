@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Panel Club — redesign preview (rough, not final)</title>
+<style>
+  :root {
+    --bg-deep: #0a0908;
+    --bg: #100e0b;
+    --surface: #1a1611;
+    --surface-raised: #251f17;
+    --surface-hover: #2f271b;
+    --border-subtle: #221c15;
+    --border: #332b1f;
+    --text: #f5efe1;
+    --text-muted: #a89a83;
+    --text-subtle: #6e6453;
+    --accent: #f0a020;
+    --accent-hover: #ffb84d;
+    --accent-muted: #3a2a10;
+    --ink: #1a0f00;
+    --danger: #e0644a;
+    --radius-card: 16px;
+    --radius-pill: 999px;
+    --dur: 200ms;
+    --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg-deep);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", Inter, Roboto, sans-serif;
+    line-height: 1.45;
+  }
+
+  .banner {
+    background: var(--surface-raised);
+    color: var(--text-muted);
+    text-align: center;
+    padding: 10px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border);
+  }
+  .banner strong { color: var(--accent); }
+
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding: 14px 28px;
+    background: rgba(10, 9, 8, 0.9);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 800;
+    margin-right: auto;
+    letter-spacing: -0.02em;
+  }
+  .brand i {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 12px var(--accent);
+    display: inline-block;
+  }
+  nav { display: flex; gap: 20px; }
+  nav button {
+    background: none; border: none; color: var(--text-muted);
+    font: inherit; font-size: 14px; cursor: pointer; padding: 8px 2px;
+    border-bottom: 2px solid transparent;
+    transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease);
+  }
+  nav button:hover { color: var(--text); }
+  nav button.active { color: var(--text); border-color: var(--accent); }
+
+  .screen { display: none; max-width: 1100px; margin: 0 auto; padding: 28px; animation: fadeIn 320ms var(--ease); }
+  .screen.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  h1 { font-size: 38px; margin: 0 0 6px; letter-spacing: -0.03em; }
+  .muted { color: var(--text-muted); margin: 0 0 20px; }
+
+  /* Discover */
+  .hero {
+    position: relative;
+    border-radius: 20px;
+    overflow: hidden;
+    aspect-ratio: 21/9;
+    margin-bottom: 20px;
+    background: #1a1520;
+  }
+  .hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .hero::after {
+    content: "";
+    position: absolute; inset: 0;
+    background: linear-gradient(0deg, rgba(10,9,8,0.92) 0%, rgba(10,9,8,0.3) 55%, transparent 100%);
+  }
+  .hero-copy { position: absolute; left: 28px; bottom: 24px; right: 28px; z-index: 1; }
+  .hero-tag { display: inline-block; background: var(--accent-muted); color: var(--accent); font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: var(--radius-pill); margin-bottom: 10px; }
+  .hero-copy h2 { font-size: 32px; margin: 0 0 6px; letter-spacing: -0.03em; }
+  .hero-copy p { color: var(--text-muted); margin: 0 0 14px; max-width: 520px; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--accent); color: var(--ink); font-weight: 700;
+    border: none; padding: 10px 18px; border-radius: var(--radius-pill);
+    cursor: pointer; font-size: 14px;
+    transition: background var(--dur) var(--ease), transform var(--dur) var(--ease);
+  }
+  .btn:hover { background: var(--accent-hover); transform: translateY(-1px); }
+  .btn.ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  .btn.ghost:hover { background: var(--surface-hover); border-color: var(--text-subtle); }
+
+  .upcoming-strip {
+    display: flex; gap: 12px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 20px;
+  }
+  .upcoming-strip .chip {
+    flex: 0 0 auto; background: var(--surface); border: 1px solid var(--border-subtle);
+    border-radius: 12px; padding: 10px 14px; font-size: 13px; white-space: nowrap;
+  }
+  .upcoming-strip .chip b { color: var(--accent); }
+
+  .search-row {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface); border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-pill); padding: 12px 18px; margin-bottom: 14px;
+    transition: border-color var(--dur) var(--ease);
+  }
+  .search-row:focus-within { border-color: var(--accent); }
+  .search-row input { background: none; border: none; outline: none; color: var(--text); font: inherit; flex: 1; }
+  .search-row svg { color: var(--text-muted); flex-shrink: 0; }
+
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 22px; }
+  .filter-chip {
+    padding: 8px 16px; border-radius: var(--radius-pill); font-size: 13px; cursor: pointer;
+    border: 1px solid var(--border-subtle); background: var(--surface); color: var(--text-muted);
+    transition: all var(--dur) var(--ease);
+  }
+  .filter-chip:hover { border-color: var(--border); color: var(--text); }
+  .filter-chip.on { background: var(--accent); border-color: var(--accent); color: var(--ink); font-weight: 700; }
+
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-card);
+    overflow: hidden; cursor: pointer; opacity: 0; animation: cardIn 420ms var(--ease) forwards;
+    transition: transform var(--dur) var(--ease), border-color var(--dur) var(--ease);
+  }
+  .card:hover { transform: translateY(-3px); border-color: var(--border); }
+  .card:hover .card-title { color: var(--accent-hover); }
+  @keyframes cardIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  .card-thumb { position: relative; aspect-ratio: 16/9; background: #1a1520; }
+  .card-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .score-badge {
+    position: absolute; top: 8px; left: 8px; background: rgba(10,9,8,0.75); backdrop-filter: blur(4px);
+    color: var(--accent); font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: var(--radius-pill);
+  }
+  .card-body { padding: 12px 14px 14px; }
+  .card-title { font-size: 15px; font-weight: 700; margin: 0 0 4px; transition: color var(--dur) var(--ease); }
+  .card-meta { font-size: 13px; color: var(--text-muted); margin: 0; }
+
+  /* Show page */
+  .crumb { color: var(--text-muted); font-size: 13px; margin-bottom: 14px; }
+  .crumb a { color: var(--accent); text-decoration: none; }
+  .show-hero { position: relative; border-radius: 20px; overflow: hidden; aspect-ratio: 18/7; margin-bottom: 16px; }
+  .show-hero img { width: 100%; height: 100%; object-fit: cover; }
+  .show-hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(0deg, rgba(10,9,8,0.9), transparent 60%); }
+  .show-hero h2 { position: absolute; left: 24px; bottom: 20px; font-size: 30px; margin: 0; letter-spacing: -0.03em; z-index: 1; }
+
+  .stat-chips { display: flex; gap: 10px; margin-bottom: 22px; }
+  .stat-chip { background: var(--surface); border: 1px solid var(--border-subtle); padding: 8px 14px; border-radius: var(--radius-pill); font-size: 13px; color: var(--text-muted); }
+  .stat-chip b { color: var(--text); }
+
+  .ep-row {
+    display: grid; grid-template-columns: 32px 100px 1fr auto; align-items: center; gap: 14px;
+    padding: 10px 14px; border-radius: 12px; border: 1px solid var(--border-subtle); background: var(--surface);
+    margin-bottom: 8px; cursor: pointer;
+    transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+  }
+  .ep-row:hover { border-color: var(--border); background: var(--surface-hover); }
+  .ep-num { color: var(--text-subtle); font-size: 13px; text-align: center; }
+  .ep-thumb { aspect-ratio: 16/9; border-radius: 8px; overflow: hidden; background: #1a1520; }
+  .ep-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .ep-title { font-size: 14px; font-weight: 600; margin: 0 0 3px; }
+  .ep-meta { font-size: 12px; color: var(--text-muted); margin: 0; }
+  .ep-status { font-size: 12px; color: var(--text-subtle); white-space: nowrap; }
+
+  /* Episode page */
+  .ep-layout { display: grid; grid-template-columns: 1fr 300px; gap: 24px; align-items: start; }
+  .player-mock {
+    position: relative; aspect-ratio: 16/9; border-radius: 16px; overflow: hidden; background: #000;
+    display: flex; align-items: center; justify-content: center; margin-bottom: 16px;
+  }
+  .player-mock img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.55; }
+  .play-btn {
+    position: relative; width: 64px; height: 64px; border-radius: 50%; background: var(--accent);
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+    transition: transform var(--dur) var(--ease);
+  }
+  .play-btn:hover { transform: scale(1.08); }
+  .actions { display: flex; gap: 10px; margin-bottom: 18px; }
+  .sidebar { background: var(--surface); border: 1px solid var(--border-subtle); border-radius: 16px; padding: 16px; position: sticky; top: 78px; }
+  .sidebar h4 { margin: 0 0 12px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); }
+  .review-card { background: var(--surface-raised); border-radius: 12px; padding: 12px; margin-bottom: 10px; }
+  .review-card .stars { color: var(--accent); font-size: 13px; }
+  .review-card p { font-size: 13px; color: var(--text-muted); margin: 6px 0 0; }
+  .star-picker { display: flex; gap: 2px; margin-bottom: 12px; }
+  .star-picker span { font-size: 22px; color: var(--text-subtle); cursor: pointer; transition: color 120ms var(--ease); }
+  .star-picker span.lit { color: var(--accent); }
+  .field { width: 100%; background: #0e0c08; border: 1px solid var(--border-subtle); border-radius: 10px; color: var(--text); padding: 9px 12px; font: inherit; margin-bottom: 10px; }
+
+  @media (max-width: 720px) {
+    .grid { grid-template-columns: repeat(2, 1fr); }
+    .ep-layout { grid-template-columns: 1fr; }
+    .sidebar { position: static; }
+  }
+</style>
+</head>
+<body>
+
+<div class="banner">Rough visual preview — <strong>not the real app</strong>, just to feel the theme, layout, and motion before it's built for real.</div>
+
+<header>
+  <div class="brand"><i></i>Panel Club</div>
+  <nav>
+    <button class="tab active" data-screen="discover">Discover</button>
+    <button class="tab" data-screen="show">Show</button>
+    <button class="tab" data-screen="episode">Episode</button>
+  </nav>
+</header>
+
+<section class="screen active" id="discover">
+  <div class="hero">
+    <img src="https://i.ytimg.com/vi/eHTXQW58WhA/hqdefault.jpg" alt="" />
+    <div class="hero-copy">
+      <span class="hero-tag">Featured</span>
+      <h2>India's Got Latent</h2>
+      <p>Samay Raina's panel show where nothing is off-limits. The most-talked-about comedy panel this year.</p>
+      <button class="btn">▶ Watch S2 Ep 1</button>
+    </div>
+  </div>
+
+  <div class="upcoming-strip">
+    <div class="chip">Lie Hard · <b>Premieres 12 Oct</b></div>
+    <div class="chip">BroCode Roast · <b>Premieres 18 Oct</b></div>
+  </div>
+
+  <label class="search-row">
+    <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.75"><circle cx="8.5" cy="8.5" r="6"/><path d="M13 13 L18 18" stroke-linecap="round"/></svg>
+    <input placeholder="Search shows, hosts, guests or episodes" />
+  </label>
+
+  <div class="filters">
+    <div class="filter-chip on">All shows</div>
+    <div class="filter-chip">Panel shows</div>
+    <div class="filter-chip">Game shows</div>
+    <div class="filter-chip">Roasts</div>
+    <div class="filter-chip">Advice & banter</div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+</section>
+
+<section class="screen" id="show">
+  <p class="crumb"><a href="#">Discover</a> / Pretty Good Roast Show</p>
+  <div class="show-hero">
+    <img src="https://i.ytimg.com/vi/U-SuiWkRAlo/hqdefault.jpg" alt="" />
+    <h2>Pretty Good Roast Show</h2>
+  </div>
+  <div class="stat-chips">
+    <div class="stat-chip">Hosted by <b>Aashish Solanki</b></div>
+    <div class="stat-chip"><b>Roasts</b></div>
+    <div class="stat-chip"><b>4.2</b> from 12 reviews</div>
+  </div>
+  <div id="episodeList"></div>
+</section>
+
+<section class="screen" id="episode">
+  <p class="crumb"><a href="#">Pretty Good Roast Show</a> / Ep 1 ft. Aakash Gupta</p>
+  <div class="ep-layout">
+    <div>
+      <div class="player-mock">
+        <img src="https://i.ytimg.com/vi/U-SuiWkRAlo/hqdefault.jpg" alt="" />
+        <div class="play-btn">▶</div>
+      </div>
+      <div class="actions">
+        <button class="btn ghost">Save</button>
+        <button class="btn ghost">Mark finished</button>
+      </div>
+      <h1 style="font-size:22px;">Pretty Good Roast Show: S1. EP 1/7 | Ft. Aakash Gupta</h1>
+      <p class="muted">55 min · Aired · Guests: Aakash Gupta</p>
+    </div>
+    <aside class="sidebar">
+      <h4>Reviews · 4.2 from 2</h4>
+      <div class="review-card">
+        <strong>Rhea</strong> <span class="stars">★★★★☆</span>
+        <p>Aakash absolutely destroyed the panel. Best episode this season.</p>
+      </div>
+      <div class="review-card">
+        <strong>Kabir</strong> <span class="stars">★★★★★</span>
+        <p>Watched it twice already.</p>
+      </div>
+      <h4 style="margin-top:18px;">Leave a review</h4>
+      <div class="star-picker" id="starPicker">
+        <span data-v="1">★</span><span data-v="2">★</span><span data-v="3">★</span><span data-v="4">★</span><span data-v="5">★</span>
+      </div>
+      <input class="field" placeholder="Your name" />
+      <textarea class="field" rows="3" placeholder="What landed, what didn't?"></textarea>
+      <button class="btn" style="width:100%; justify-content:center;">Submit review</button>
+    </aside>
+  </div>
+</section>
+
+<script>
+  const shows = [
+    { name: "India's Got Latent", host: "Samay Raina", cat: "Panel shows", cover: "eHTXQW58WhA", score: "4.6" },
+    { name: "Pretty Good Roast Show", host: "Aashish Solanki", cat: "Roasts", cover: "U-SuiWkRAlo", score: "4.2" },
+    { name: "Relationshit Advice", host: "Raunaq Rajani", cat: "Advice & banter", cover: "PAweiRjZl0A", score: null },
+    { name: "The General Fun Game Show", host: "Kaneez Surka", cat: "Game shows", cover: "gd8Ov_4IgkY", score: "3.9" },
+    { name: "Who Let the Drunks Out", host: "Swati Sachdeva", cat: "Game shows", cover: "SecoaC9RNOk", score: null },
+    { name: "BroCode Roast", host: "Aashish Solanki", cat: "Roasts", cover: "9dX4h77PQV8", score: "4.4" },
+    { name: "Judge Me If You Can", host: "Aashish Solanki", cat: "Panel shows", cover: "1IA3p5NTwo8", score: "4.0" },
+    { name: "Lie Hard", host: "Gaurav Kapoor", cat: "Game shows", cover: "auWx4Knoap4", score: null },
+  ];
+
+  document.getElementById("grid").innerHTML = shows.map((s, i) => `
+    <div class="card" style="animation-delay:${i * 45}ms">
+      <div class="card-thumb">
+        <img src="https://i.ytimg.com/vi/${s.cover}/hqdefault.jpg" alt="" />
+        ${s.score ? `<span class="score-badge">★ ${s.score}</span>` : ""}
+      </div>
+      <div class="card-body">
+        <p class="card-title">${s.name}</p>
+        <p class="card-meta">${s.host} · ${s.cat}</p>
+      </div>
+    </div>
+  `).join("");
+
+  document.getElementById("episodeList").innerHTML = [1,2,3,4].map(n => `
+    <div class="ep-row">
+      <span class="ep-num">${n}</span>
+      <div class="ep-thumb"><img src="https://i.ytimg.com/vi/U-SuiWkRAlo/hqdefault.jpg" alt="" /></div>
+      <div>
+        <p class="ep-title">Pretty Good Roast Show: S1. EP ${n}/7</p>
+        <p class="ep-meta">4.${n} from ${n * 3} reviews</p>
+      </div>
+      <span class="ep-status">Aired</span>
+    </div>
+  `).join("");
+
+  document.querySelectorAll(".tab").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".tab").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById(btn.dataset.screen).classList.add("active");
+    });
+  });
+
+  document.querySelectorAll("#starPicker span").forEach(star => {
+    star.addEventListener("mouseenter", () => {
+      const v = +star.dataset.v;
+      document.querySelectorAll("#starPicker span").forEach(s => s.classList.toggle("lit", +s.dataset.v <= v));
+    });
+  });
+  document.getElementById("starPicker").addEventListener("mouseleave", () => {
+    document.querySelectorAll("#starPicker span").forEach(s => s.classList.remove("lit"));
+  });
+</script>
+
+</body>
+</html>

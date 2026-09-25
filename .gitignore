@@ -4,3 +4,5 @@ data/*.sqlite
 tsconfig.tsbuildinfo
 .env
 .env.local
+.pglite-data
+.claude

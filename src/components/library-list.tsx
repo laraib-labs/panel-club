@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 
 import { createBrowserStorage, listLibrary, type LibraryRecord } from "../lib/library.ts";
@@ -46,32 +47,40 @@ function EpisodeSection({
   }
 
   return (
-    <>
-      <h4>{heading}</h4>
+    <section className="grid gap-2">
+      <h4 className="text-xs uppercase tracking-[0.1em] text-text-muted">{heading}</h4>
       {items.map((item) => (
-        <a className="episode-row" href={item.href} key={item.episodeId}>
-          <div className="episode-row__thumb">
-            <img
+        <a
+          className="grid grid-cols-[160px_1fr] items-center overflow-hidden rounded-card border border-border-subtle bg-surface transition-colors duration-fast ease-out hover:border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg"
+          href={item.href}
+          key={item.episodeId}
+        >
+          <div className="relative aspect-video bg-[#1a1520]">
+            <Image
               src={youtubeThumbUrl(item.episodeId)}
               alt={item.title}
-              className="episode-row__img"
+              className="object-cover"
+              fill
+              sizes="160px"
             />
           </div>
-          <div className="episode-row__copy">
-            <strong>{item.title}</strong>
+          <div className="grid gap-1 px-3.5 py-3">
+            <strong className="text-[17px] font-semibold tracking-tight text-text">
+              {item.title}
+            </strong>
             <p className="meta">{item.meta}</p>
           </div>
         </a>
       ))}
-    </>
+    </section>
   );
 }
 
 export function LibraryList({ continue: continueItems, history, saved }: LibraryListProps) {
   return (
-    <div className="pad">
+    <div className="mx-auto grid max-w-[1080px] gap-5 px-5 pb-7 pt-6">
       <div>
-        <h3>Your library</h3>
+        <h3 className="m-0 text-[26px] sm:text-4xl leading-[1.08] tracking-[-0.04em] text-text">Your library</h3>
         <p className="meta">Stored in this browser. Not an account.</p>
       </div>
       <EpisodeSection heading="Continue" items={continueItems} />
@@ -83,10 +92,17 @@ export function LibraryList({ continue: continueItems, history, saved }: Library
 
 function LibraryEmpty() {
   return (
-    <div className="pad">
-      <h3>Your library</h3>
-      <p className="empty">Nothing in progress. You have not saved an episode.</p>
-      <a href="/">Discover shows</a>
+    <div className="mx-auto grid max-w-[1080px] gap-3 px-5 pb-7 pt-6">
+      <h3 className="m-0 text-[26px] sm:text-4xl leading-[1.08] tracking-[-0.04em] text-text">Your library</h3>
+      <p className="m-0 rounded-xl bg-surface p-4.5 text-text-muted">
+        Nothing in progress. You have not saved an episode.
+      </p>
+      <a
+        className="justify-self-start text-sm font-semibold text-accent transition-colors duration-fast hover:text-accent-hover"
+        href="/"
+      >
+        Discover shows
+      </a>
     </div>
   );
 }

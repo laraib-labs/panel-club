@@ -171,22 +171,22 @@ function catalogToViewFromRows(
 
 async function catalogToViewPg(pool: pg.Pool): Promise<Catalog> {
   const [showsResult, episodesResult, sourcesResult, hostsResult, guestsResult] = await Promise.all([
-    pool.query<ShowRow>("SELECT * FROM panel_club.shows ORDER BY name"),
-    pool.query<EpisodeRow>("SELECT * FROM panel_club.episodes"),
+    pool.query<ShowRow>("SELECT * FROM shows ORDER BY name"),
+    pool.query<EpisodeRow>("SELECT * FROM episodes"),
     pool.query<SourceRow>(
-      "SELECT show_slug, kind, playlist_id, channel_id, handle FROM panel_club.sources",
+      "SELECT show_slug, kind, playlist_id, channel_id, handle FROM sources",
     ),
     pool.query<{ show_slug: string; name: string }>(`
       SELECT sc.show_slug, p.name
-      FROM panel_club.show_credits sc
-      JOIN panel_club.people p ON p.slug = sc.person_slug
+      FROM show_credits sc
+      JOIN people p ON p.slug = sc.person_slug
       WHERE sc.role = 'host'
       ORDER BY sc.show_slug, p.name
     `),
     pool.query<{ episode_id: string; name: string }>(`
       SELECT ec.episode_id, p.name
-      FROM panel_club.episode_credits ec
-      JOIN panel_club.people p ON p.slug = ec.person_slug
+      FROM episode_credits ec
+      JOIN people p ON p.slug = ec.person_slug
       WHERE ec.role = 'guest'
       ORDER BY ec.episode_id, p.name
     `),
@@ -201,6 +201,12 @@ async function catalogToViewPg(pool: pg.Pool): Promise<Catalog> {
   );
 }
 
+/**
+ * Uncached: this file is imported by plain-`node --test` unit tests, and
+ * `next/cache`'s `unstable_cache` doesn't resolve outside Next's own bundler.
+ * The cross-instance-safe, tagged cache wrapper lives in catalog-cache.ts,
+ * which every page imports instead of this function directly.
+ */
 export async function loadAppCatalog(): Promise<Catalog> {
   return catalogToViewPg(getCatalogPool());
 }

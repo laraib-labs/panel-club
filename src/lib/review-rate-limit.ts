@@ -76,6 +76,20 @@ export function __resetRateLimitForTests(): void {
   limiterOverride = inMemoryLimiter;
 }
 
+function getInMemoryLimiter(): InMemoryReviewLimiter {
+  if (!inMemoryLimiter) {
+    inMemoryLimiter = createInMemoryReviewLimiter();
+  }
+
+  return inMemoryLimiter;
+}
+
+function hasUpstashEnv(): boolean {
+  return Boolean(
+    process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN,
+  );
+}
+
 function getProductionLimiter(): Ratelimit {
   if (!productionLimiter) {
     productionLimiter = new Ratelimit({
@@ -87,18 +101,49 @@ function getProductionLimiter(): Ratelimit {
   return productionLimiter;
 }
 
+const alwaysAllowLimiter: ReviewRateLimiter = {
+  async limit() {
+    return { success: true };
+  },
+};
+
+/**
+ * Upstash-or-fail in production, per ground-up-rebuild.md §8/§10: an
+ * in-process Map only protects a single serverless instance and silently
+ * resets on every cold start, which is worse than no rate limiting at all
+ * (a false sense of protection). Local/test runs without Upstash creds get
+ * an always-allow limiter instead of a fake per-instance one.
+ */
 async function getLimiter(): Promise<ReviewRateLimiter> {
   if (limiterOverride) {
     return limiterOverride;
   }
 
-  return getProductionLimiter();
+  if (hasUpstashEnv()) {
+    return getProductionLimiter();
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are required in production",
+    );
+  }
+
+  return alwaysAllowLimiter;
 }
 
 export async function takeReviewSlot(ip: string): Promise<boolean> {
   const limiter = await getLimiter();
-  const result = await limiter.limit(ip);
-  return result.success;
+
+  try {
+    const result = await limiter.limit(ip);
+    return result.success;
+  } catch {
+    // Upstash failed at request time (network blip, etc.) — fail open rather
+    // than silently swapping in a per-instance limiter that can't actually
+    // protect a multi-instance deployment.
+    return true;
+  }
 }
 
 export function parseClientIp(

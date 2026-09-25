@@ -8,6 +8,7 @@ import {
   DISPLAY_NAME_MAX_LENGTH,
   MAX_REPLIES_PER_EPISODE_PER_VIEWER,
   averageScore,
+  averageScoreFromThreads,
   initReviewsSchema,
   listReviewThread,
   listReviews,
@@ -222,6 +223,50 @@ describe("reviews", () => {
     });
 
     assert.equal(averageScore(db, "ep-two"), 4.5);
+  });
+
+  it("averageScoreFromThreads returns null for an empty thread list", () => {
+    assert.equal(averageScoreFromThreads([]), null);
+  });
+
+  it("averageScoreFromThreads matches averageScore for the same episode", () => {
+    const db = makeDb();
+
+    saveReview(db, fixtureCatalog, {
+      episodeId: "ep-two",
+      viewerId: "viewer-1",
+      displayName: "Alice",
+      stars: 4,
+      body: "A",
+      spoiler: false,
+    });
+
+    saveReview(db, fixtureCatalog, {
+      episodeId: "ep-two",
+      viewerId: "viewer-2",
+      displayName: "Bob",
+      stars: 5,
+      body: "B",
+      spoiler: false,
+    });
+
+    const threads = listReviewThread(db, "ep-two");
+    assert.equal(averageScoreFromThreads(threads), averageScore(db, "ep-two"));
+  });
+
+  it("averageScoreFromThreads ignores replies (null stars)", () => {
+    const db = makeDb();
+    const rootId = saveRootReview(db, { viewerId: "viewer-1", stars: 3 });
+    saveReply(db, {
+      parentId: rootId,
+      viewerId: "viewer-2",
+      displayName: "Bob",
+      body: "Agreed",
+      spoiler: false,
+    });
+
+    const threads = listReviewThread(db, "ep-one");
+    assert.equal(averageScoreFromThreads(threads), 3);
   });
 
   it("saveReview trims display name and body and strips tags", () => {

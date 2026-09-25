@@ -1,0 +1,41 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - panel-club-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  # Upstash's own local-dev proxy: speaks the same REST protocol @upstash/redis
+  # expects, backed by the real Redis above. Swapping to production Upstash is
+  # only ever an env var change (UPSTASH_REDIS_REST_URL/_TOKEN), never code.
+  # https://upstash.com/docs/redis/sdks/ts/developing
+  serverless-redis-http:
+    image: hiett/serverless-redis-http:latest
+    ports:
+      - "8079:80"
+    environment:
+      SRH_MODE: env
+      # Not a real credential — a shared placeholder between two local
+      # containers only, never used outside this compose network.
+      SRH_TOKEN: insecure-local-dev-placeholder
+      SRH_CONNECTION_STRING: "redis://redis:6379"
+    depends_on:
+      - redis
+
+volumes:
+  panel-club-postgres:

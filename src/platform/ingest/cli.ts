@@ -120,12 +120,33 @@ export async function pingHealthcheck(
 }
 
 
+export async function triggerRevalidate(stats: { inserted: number; updated: number }): Promise<void> {
+  const url = process.env.REVALIDATE_URL;
+  const secret = process.env.REVALIDATE_SECRET;
+  if (!url || !secret || stats.inserted + stats.updated === 0) {
+    return;
+  }
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { authorization: `Bearer ${secret}` },
+    });
+    if (!response.ok) {
+      console.error(`revalidate request failed: ${response.status}`);
+    }
+  } catch (error) {
+    console.error("revalidate request failed:", error instanceof Error ? error.message : String(error));
+  }
+}
+
 const isMain = process.argv[1]?.includes("ingest/cli.ts");
 
 if (isMain) {
   await pingHealthcheck("start");
   try {
     const result = await runIngestCli();
+    await triggerRevalidate(result);
     await pingHealthcheck("success");
     console.log(JSON.stringify(result, null, 2));
   } catch (error) {

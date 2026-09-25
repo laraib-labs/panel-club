@@ -8,6 +8,26 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # generateStaticParams + revalidate now prerender several routes at
+      # build time (see docs/plans/ui-rebuild.md Phase 1), so `next build`
+      # needs a real, reachable Postgres — not the unreachable placeholder
+      # this used to be, back when every route was force-dynamic.
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres?options=-c%20search_path%3Dpanel_club%2Cpublic
     steps:
       - uses: actions/checkout@v4
 
@@ -30,7 +50,10 @@ jobs:
       - name: Unit tests
         run: node --experimental-strip-types --test $(find src -name '*.test.ts' | sort | tr '\n' ' ')
 
+      - name: Migrate + seed build database
+        run: |
+          npm run db:migrate
+          npm run db:seed
+
       - name: Next.js build
-        env:
-          DATABASE_URL: postgresql://localhost/unused
         run: npx next build
