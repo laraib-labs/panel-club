@@ -8,15 +8,16 @@ import { Player } from "../../../../../components/player.tsx";
 import { SiteHeader } from "../../../../../components/site-header.tsx";
 import {
   ReviewForm,
-  ReviewThreadCard,
+  ReviewFeed,
+  type ReviewActionState,
   type ReviewThreadItem,
 } from "../../../../../components/review-form.tsx";
 import { loadAppCatalog } from "../../../../../lib/catalog-cache.ts";
 import { getEpisode, getShow, type Episode } from "../../../../../lib/catalog.ts";
 import { parseClientIp, takeReviewSlot } from "../../../../../lib/review-rate-limit.ts";
 import { getReviewsPool } from "../../../../../lib/reviews-db.ts";
-import { listReviewThread, saveReply, saveReview } from "../../../../../lib/reviews-pg.ts";
-import { averageScoreFromThreads, type ReviewThread } from "../../../../../lib/reviews.ts";
+import { listReviewThreadPage, saveReply, saveReview } from "../../../../../lib/reviews-pg.ts";
+import type { ReviewThread } from "../../../../../lib/reviews.ts";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +57,7 @@ async function resolveViewer(displayName: string): Promise<ViewerCookie> {
     cookieStore.set("pc_viewer", JSON.stringify(viewer), {
       httpOnly: true,
       sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
       path: "/",
       maxAge: VIEWER_COOKIE_MAX_AGE,
     });
@@ -66,6 +68,7 @@ async function resolveViewer(displayName: string): Promise<ViewerCookie> {
       {
         httpOnly: true,
         sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
         path: "/",
         maxAge: VIEWER_COOKIE_MAX_AGE,
       },
@@ -122,12 +125,13 @@ function toReviewThreadItems(threads: ReviewThread[]): ReviewThreadItem[] {
 async function submitReview(
   slug: string,
   episodeId: string,
+  _state: ReviewActionState,
   formData: FormData,
-): Promise<void> {
+): Promise<ReviewActionState> {
   "use server";
 
   if (!(await takeReviewSlot(await clientIpFromHeaders()))) {
-    return;
+    return { status: "error", message: "Too many ratings in a short time. Please try again shortly." };
   }
 
   const displayName = String(formData.get("displayName") ?? "").trim();
@@ -135,23 +139,28 @@ async function submitReview(
   const body = String(formData.get("body") ?? "").trim();
   const spoiler = formData.get("spoiler") === "true";
 
-  if (!displayName || !body || !Number.isInteger(stars) || stars < 1 || stars > 5) {
-    return;
+  if (!displayName || !Number.isInteger(stars) || stars < 1 || stars > 5) {
+    return { status: "error", message: "Choose a display name and a star rating to continue." };
   }
 
-  const viewer = await resolveViewer(displayName);
-  const catalog = await loadAppCatalog();
+  try {
+    const viewer = await resolveViewer(displayName);
+    const catalog = await loadAppCatalog();
 
-  await saveReview(getReviewsPool(), catalog, {
-    episodeId,
-    viewerId: viewer.id,
-    displayName,
-    stars,
-    body,
-    spoiler,
-  });
+    await saveReview(getReviewsPool(), catalog, {
+      episodeId,
+      viewerId: viewer.id,
+      displayName,
+      stars,
+      body,
+      spoiler,
+    });
 
-  revalidatePath(`/shows/${slug}/episodes/${episodeId}`);
+    revalidatePath(`/shows/${slug}/episodes/${episodeId}`);
+    return { status: "success", message: "Your rating is posted. Thank you!" };
+  } catch {
+    return { status: "error", message: "We couldn’t post your rating. Please try again." };
+  }
 }
 
 async function submitReply(
@@ -191,38 +200,36 @@ async function submitReply(
  * Everything that depends on the reviews DB round trip, isolated behind its
  * own Suspense boundary so the shell (title, player, guests) can paint
  * without waiting on it — the biggest perceived-latency win on a cold Neon
- * connection. Score is derived from the same threads query, not a second
- * round trip (see averageScoreFromThreads).
+ * connection. Only the first page of threads is loaded for the initial render.
  */
 async function ReviewsSection({ slug, episode }: { slug: string; episode: Episode }) {
   const pool = getReviewsPool();
-  const threads = await listReviewThread(pool, episode.videoId);
-  const reviewCount = threads.length;
-  const score = averageScoreFromThreads(threads);
+  const page = await listReviewThreadPage(pool, episode.videoId, null);
+  const reviewCount = page.totalCount;
   const cookieStore = await cookies();
   const viewer = parseViewerCookie(cookieStore.get("pc_viewer")?.value);
   const submit = submitReview.bind(null, slug, episode.videoId);
   const reply = submitReply.bind(null, slug, episode.videoId);
-  const threadItems = toReviewThreadItems(threads);
+  const threadItems = toReviewThreadItems(page.threads);
 
   return (
     <>
-      <p className="m-0 text-sm text-text-muted">{formatScore(score, reviewCount)}</p>
+      <p className="m-0 text-sm text-text-muted">{formatScore(page.averageScore, reviewCount)}</p>
+
+      <ReviewForm action={submit} defaultDisplayName={viewer?.displayName ?? "Panel Club fan"} />
 
       {threadItems.length === 0 ? (
         <p className="m-0 text-sm text-text-muted">Be the first.</p>
       ) : (
-        threadItems.map((thread) => (
-          <ReviewThreadCard
-            key={thread.id}
-            thread={thread}
-            replyAction={reply}
-            defaultDisplayName={viewer?.displayName ?? ""}
-          />
-        ))
+        <ReviewFeed
+          episodeId={episode.videoId}
+          initialThreads={threadItems}
+          initialCursor={page.nextCursor}
+          replyAction={reply}
+          defaultDisplayName={viewer?.displayName ?? "Panel Club fan"}
+        />
       )}
 
-      <ReviewForm action={submit} defaultDisplayName={viewer?.displayName ?? ""} />
     </>
   );
 }

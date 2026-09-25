@@ -31,7 +31,7 @@ function splitGuestNames(guest: string): string[] {
 }
 
 function personFromName(name: string): Person {
-  return { name, slug: slugFromName(name) };
+  return { name, slug: slugFromName(name), hostedShowCount: 0, guestEpisodeCount: 0 };
 }
 
 export function listPeople(catalog: Catalog): Person[] {
@@ -40,13 +40,17 @@ export function listPeople(catalog: Catalog): Person[] {
   for (const show of catalog.shows) {
     for (const name of splitHostNames(show.host)) {
       const person = personFromName(name);
-      bySlug.set(person.slug, person);
+      const existing = bySlug.get(person.slug) ?? person;
+      existing.hostedShowCount += 1;
+      bySlug.set(person.slug, existing);
     }
 
     for (const episode of show.episodes) {
       for (const name of splitGuestNames(episode.guest)) {
         const person = personFromName(name);
-        bySlug.set(person.slug, person);
+        const existing = bySlug.get(person.slug) ?? person;
+        existing.guestEpisodeCount += 1;
+        bySlug.set(person.slug, existing);
       }
     }
   }

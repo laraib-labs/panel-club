@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useActionState, useState } from "react";
 
 import { chipClassName } from "./chip-styles.ts";
 
@@ -18,10 +18,21 @@ export type ReviewThreadItem = {
   }>;
 };
 
-type ReviewFormProps = {
-  action: (formData: FormData) => Promise<void>;
+type ReviewFeedProps = {
+  episodeId: string;
+  initialThreads: ReviewThreadItem[];
+  initialCursor: string | null;
+  replyAction: (formData: FormData) => Promise<void>;
   defaultDisplayName?: string;
 };
+
+type ReviewFormProps = {
+  action: (state: ReviewActionState, formData: FormData) => Promise<ReviewActionState>;
+  defaultDisplayName?: string;
+};
+
+export type ReviewActionState = { status: "idle" | "success" | "error"; message: string };
+const initialReviewState: ReviewActionState = { status: "idle", message: "" };
 
 type ReplyFormProps = {
   action: (formData: FormData) => Promise<void>;
@@ -91,15 +102,17 @@ function StarPicker({ name }: { name: string }) {
   );
 }
 
-export function ReviewForm({ action, defaultDisplayName = "" }: ReviewFormProps) {
+export function ReviewForm({ action, defaultDisplayName = "Panel Club fan" }: ReviewFormProps) {
+  const [state, formAction, pending] = useActionState(action, initialReviewState);
   return (
     <form
       className="grid gap-4 rounded-card border border-border-subtle bg-surface p-5"
-      action={action}
+      action={formAction}
     >
       <div className="grid gap-1">
         <h4 className="text-[15px] font-semibold normal-case text-text">Leave a review</h4>
-        <p className="meta">Your review replaces the last one from this browser</p>
+        <p className="meta">Pick a rating, then add a comment only if you want to.</p>
+        <p className="meta">Your rating replaces your previous one from this browser.</p>
       </div>
       <label className="grid gap-2 text-text" htmlFor="displayName">
         <span className="text-[13px] font-semibold text-text-muted">Display name</span>
@@ -120,14 +133,15 @@ export function ReviewForm({ action, defaultDisplayName = "" }: ReviewFormProps)
         <StarPicker name="stars" />
       </fieldset>
       <label className="grid gap-2 text-text" htmlFor="body">
-        <span className="text-[13px] font-semibold text-text-muted">Review</span>
+        <span className="text-[13px] font-semibold text-text-muted">
+          Comment <span className="font-normal">(optional)</span>
+        </span>
         <textarea
           id="body"
           name="body"
-          required
           rows={4}
           maxLength={500}
-          placeholder="Who killed it, what landed, would you watch again?"
+          placeholder="Add a thought if you like — a star rating is enough."
           className={`${fieldInputClassName} min-h-[108px] resize-y`}
         />
       </label>
@@ -135,9 +149,22 @@ export function ReviewForm({ action, defaultDisplayName = "" }: ReviewFormProps)
         <input name="spoiler" type="checkbox" value="true" className="h-4.5 w-4.5 accent-accent" />
         This review spoils the episode
       </label>
-      <button className={`${chipClassName(true)} min-w-40 justify-self-start`} type="submit">
-        Submit review
+      <button
+        disabled={pending}
+        className={`${chipClassName(true)} min-w-40 justify-self-start disabled:cursor-wait disabled:opacity-60`}
+        type="submit"
+      >
+        {pending ? "Posting…" : "Post rating"}
       </button>
+      {state.message ? (
+        <p
+          aria-live="polite"
+          role={state.status === "error" ? "alert" : "status"}
+          className={state.status === "error" ? "m-0 text-sm text-danger" : "m-0 text-sm text-text-muted"}
+        >
+          {state.message}
+        </p>
+      ) : null}
     </form>
   );
 }
@@ -208,7 +235,7 @@ export function ReviewThreadCard({
           <span className="ml-2 text-accent">{formatStars(thread.stars)}</span>
         ) : null}
       </strong>
-      <ReviewBody body={thread.body} spoiler={thread.spoiler} />
+      {thread.body.trim() ? <ReviewBody body={thread.body} spoiler={thread.spoiler} /> : null}
       {!replying ? (
         <button
           type="button"
@@ -239,5 +266,61 @@ export function ReviewThreadCard({
         </div>
       ) : null}
     </article>
+  );
+}
+
+export function ReviewFeed({
+  episodeId,
+  initialThreads,
+  initialCursor,
+  replyAction,
+  defaultDisplayName,
+}: ReviewFeedProps) {
+  const [threads, setThreads] = useState(initialThreads);
+  const [cursor, setCursor] = useState(initialCursor);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function loadOlder() {
+    if (!cursor || loading) return;
+    setLoading(true);
+    setError("");
+    try {
+      const response = await fetch(
+        `/api/reviews/${encodeURIComponent(episodeId)}?cursor=${encodeURIComponent(cursor)}`,
+      );
+      if (!response.ok) throw new Error("Could not load older reviews.");
+      const page = await response.json() as { threads: ReviewThreadItem[]; nextCursor: string | null };
+      setThreads((current) => [...current, ...page.threads]);
+      setCursor(page.nextCursor);
+    } catch {
+      setError("Could not load older reviews. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="grid gap-3">
+      {threads.map((thread) => (
+        <ReviewThreadCard
+          key={thread.id}
+          thread={thread}
+          replyAction={replyAction}
+          defaultDisplayName={defaultDisplayName}
+        />
+      ))}
+      {error ? <p role="alert" className="m-0 text-sm text-danger">{error}</p> : null}
+      {cursor ? (
+        <button
+          type="button"
+          onClick={loadOlder}
+          disabled={loading}
+          className="min-h-11 justify-self-start rounded-pill border border-border-subtle bg-surface px-4 text-sm text-text transition-colors hover:border-border disabled:opacity-60"
+        >
+          {loading ? "Loading…" : "Show older reviews"}
+        </button>
+      ) : null}
+    </div>
   );
 }

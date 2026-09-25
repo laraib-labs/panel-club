@@ -4,9 +4,9 @@ import { describe, it } from "node:test";
 import { filterPeople, personMonogram, type Person } from "./people-view.ts";
 
 const samplePeople: Person[] = [
-  { name: "Alice Host", slug: "alice-host" },
-  { name: "Bob Host", slug: "bob-host" },
-  { name: "Charlie Guest", slug: "charlie-guest" },
+  { name: "Alice Host", slug: "alice-host", hostedShowCount: 1, guestEpisodeCount: 0 },
+  { name: "Bob Host", slug: "bob-host", hostedShowCount: 1, guestEpisodeCount: 0 },
+  { name: "Charlie Guest", slug: "charlie-guest", hostedShowCount: 0, guestEpisodeCount: 1 },
 ];
 
 describe("personMonogram", () => {

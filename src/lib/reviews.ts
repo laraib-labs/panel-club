@@ -142,6 +142,14 @@ export function sanitizeBody(body: string): string {
   return sanitized;
 }
 
+export function sanitizeOptionalBody(body: string): string {
+  const sanitized = stripTags(body).trim();
+  if (sanitized.length > BODY_MAX_LENGTH) {
+    throw new Error(`Body must be at most ${BODY_MAX_LENGTH} characters`);
+  }
+  return sanitized;
+}
+
 export function assertValidStars(stars: number): void {
   if (!Number.isInteger(stars) || stars < 1 || stars > 5) {
     throw new Error("Stars must be an integer from 1 to 5");
@@ -233,7 +241,7 @@ export function saveReview(db: DatabaseSync, catalog: Catalog, input: SaveReview
   assertValidStars(input.stars);
 
   const displayName = sanitizeDisplayName(input.displayName);
-  const body = sanitizeBody(input.body);
+  const body = sanitizeOptionalBody(input.body);
   const createdAt = new Date().toISOString();
   const existingId = findRootReviewId(db, input.episodeId, input.viewerId);
 
