@@ -1,7 +1,8 @@
 -- Copy of migrations/001_init.sql for readers. Runner applies the numbered files.
-
-CREATE SCHEMA IF NOT EXISTS panel_club;
-CREATE SCHEMA IF NOT EXISTS panel_club_test;
+-- Plain `public` schema, no qualification anywhere in the app. Environment
+-- isolation is by which DATABASE_URL/branch you hold (local Docker Postgres,
+-- Neon development, Neon production) — not by schema name. See
+-- docs/plans/ground-up-rebuild.md §6 and docs/plans/local-infra-and-redesign.md.
 
 CREATE TABLE IF NOT EXISTS schema_migrations (
   id TEXT PRIMARY KEY,
@@ -53,6 +54,8 @@ CREATE TABLE IF NOT EXISTS episodes (
   published_at TEXT
 );
 
+CREATE INDEX IF NOT EXISTS episodes_show_slug_idx ON episodes (show_slug);
+
 CREATE TABLE IF NOT EXISTS show_credits (
   show_slug TEXT NOT NULL REFERENCES shows (slug) ON DELETE CASCADE,
   person_slug TEXT NOT NULL REFERENCES people (slug),
@@ -66,6 +69,8 @@ CREATE TABLE IF NOT EXISTS episode_credits (
   role TEXT NOT NULL CHECK (role IN ('host', 'guest')),
   PRIMARY KEY (episode_id, person_slug, role)
 );
+
+CREATE INDEX IF NOT EXISTS episode_credits_person_slug_idx ON episode_credits (person_slug);
 
 CREATE TABLE IF NOT EXISTS reviews (
   id TEXT PRIMARY KEY,
@@ -82,6 +87,8 @@ CREATE TABLE IF NOT EXISTS reviews (
 CREATE UNIQUE INDEX IF NOT EXISTS reviews_root_unique
   ON reviews (episode_id, viewer_id)
   WHERE parent_id IS NULL;
+
+CREATE INDEX IF NOT EXISTS reviews_episode_id_idx ON reviews (episode_id);
 
 CREATE TABLE IF NOT EXISTS ingest_runs (
   id TEXT PRIMARY KEY,

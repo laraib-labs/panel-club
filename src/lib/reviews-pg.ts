@@ -60,7 +60,7 @@ async function findRootReviewId(
   const result = await pool.query<{ id: string }>(
     `
     SELECT id
-    FROM panel_club.reviews
+    FROM reviews
     WHERE episode_id = $1
       AND viewer_id = $2
       AND parent_id IS NULL
@@ -75,7 +75,7 @@ async function getReviewById(pool: pg.Pool, id: string): Promise<Review | null> 
   const result = await pool.query<PgReviewRow>(
     `
     SELECT ${REVIEW_COLUMNS}
-    FROM panel_club.reviews
+    FROM reviews
     WHERE id = $1
   `,
     [id],
@@ -93,7 +93,7 @@ async function countViewerRepliesOnEpisode(
   const result = await pool.query<{ count: string }>(
     `
     SELECT COUNT(*)::text AS count
-    FROM panel_club.reviews
+    FROM reviews
     WHERE episode_id = $1
       AND viewer_id = $2
       AND parent_id IS NOT NULL
@@ -123,7 +123,7 @@ export async function saveReview(
   if (existingId) {
     await pool.query(
       `
-      UPDATE panel_club.reviews
+      UPDATE reviews
       SET
         display_name = $1,
         stars = $2,
@@ -139,7 +139,7 @@ export async function saveReview(
 
   await pool.query(
     `
-    INSERT INTO panel_club.reviews (
+    INSERT INTO reviews (
       id,
       episode_id,
       viewer_id,
@@ -191,7 +191,7 @@ export async function saveReply(pool: pg.Pool, input: SaveReplyInput): Promise<R
 
   await pool.query(
     `
-    INSERT INTO panel_club.reviews (
+    INSERT INTO reviews (
       id,
       episode_id,
       viewer_id,
@@ -228,11 +228,64 @@ export async function saveReply(pool: pg.Pool, input: SaveReplyInput): Promise<R
   };
 }
 
+export type EpisodeScore = {
+  average: number | null;
+  reviewCount: number;
+};
+
+export function emptyEpisodeScore(): EpisodeScore {
+  return { average: null, reviewCount: 0 };
+}
+
+export function combineEpisodeScores(scores: EpisodeScore[]): EpisodeScore {
+  let weighted = 0;
+  let reviewCount = 0;
+
+  for (const score of scores) {
+    if (score.average === null || score.reviewCount === 0) {
+      continue;
+    }
+
+    weighted += score.average * score.reviewCount;
+    reviewCount += score.reviewCount;
+  }
+
+  return reviewCount === 0
+    ? emptyEpisodeScore()
+    : { average: weighted / reviewCount, reviewCount };
+}
+
+export async function listEpisodeScores(pool: pg.Pool): Promise<Map<string, EpisodeScore>> {
+  const result = await pool.query<{
+    episode_id: string;
+    average: string;
+    review_count: string;
+  }>(`
+    SELECT
+      episode_id,
+      AVG(stars)::text AS average,
+      COUNT(*)::text AS review_count
+    FROM reviews
+    WHERE parent_id IS NULL
+    GROUP BY episode_id
+  `);
+
+  const scores = new Map<string, EpisodeScore>();
+  for (const row of result.rows) {
+    scores.set(row.episode_id, {
+      average: Number(row.average),
+      reviewCount: Number(row.review_count),
+    });
+  }
+
+  return scores;
+}
+
 export async function listReviews(pool: pg.Pool, episodeId: string): Promise<Review[]> {
   const result = await pool.query<PgReviewRow>(
     `
     SELECT ${REVIEW_COLUMNS}
-    FROM panel_club.reviews
+    FROM reviews
     WHERE episode_id = $1
       AND parent_id IS NULL
     ORDER BY created_at DESC
@@ -244,34 +297,43 @@ export async function listReviews(pool: pg.Pool, episodeId: string): Promise<Rev
 }
 
 export async function listReviewThread(pool: pg.Pool, episodeId: string): Promise<ReviewThread[]> {
-  const roots = await listReviews(pool, episodeId);
-  const threads: ReviewThread[] = [];
+  const result = await pool.query<PgReviewRow>(
+    `
+    SELECT ${REVIEW_COLUMNS}
+    FROM reviews
+    WHERE episode_id = $1
+    ORDER BY created_at ASC
+  `,
+    [episodeId],
+  );
 
-  for (const review of roots) {
-    const result = await pool.query<PgReviewRow>(
-      `
-      SELECT ${REVIEW_COLUMNS}
-      FROM panel_club.reviews
-      WHERE parent_id = $1
-      ORDER BY created_at ASC
-    `,
-      [review.id],
-    );
+  const reviews = result.rows.map(pgRowToReview);
+  const repliesByParent = new Map<string, Review[]>();
 
-    threads.push({
-      review,
-      replies: result.rows.map(pgRowToReview),
-    });
+  for (const review of reviews) {
+    if (review.parentId === null) {
+      continue;
+    }
+
+    const replies = repliesByParent.get(review.parentId) ?? [];
+    replies.push(review);
+    repliesByParent.set(review.parentId, replies);
   }
 
-  return threads;
+  return reviews
+    .filter((review) => review.parentId === null)
+    .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+    .map((review) => ({
+      review,
+      replies: repliesByParent.get(review.id) ?? [],
+    }));
 }
 
 export async function averageScore(pool: pg.Pool, episodeId: string): Promise<number | null> {
   const result = await pool.query<{ average: string | null }>(
     `
     SELECT AVG(stars)::text AS average
-    FROM panel_club.reviews
+    FROM reviews
     WHERE episode_id = $1
       AND parent_id IS NULL
   `,

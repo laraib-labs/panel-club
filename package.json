@@ -7,6 +7,8 @@
   },
   "scripts": {
     "dev": "next dev",
+    "dev:docker": "node --experimental-strip-types scripts/dev-docker.ts",
+    "dev:local": "node --experimental-strip-types scripts/dev.ts",
     "build": "next build",
     "start": "next start",
     "ingest": "node --experimental-strip-types src/platform/ingest/cli.ts",
@@ -15,14 +17,19 @@
     "db:seed": "node --experimental-strip-types src/platform/seed.ts"
   },
   "dependencies": {
-    "@upstash/ratelimit": "^2.2.0",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@upstash/ratelimit": "2.0.8",
     "@upstash/redis": "^1.39.0",
+    "geist": "^1.7.2",
     "next": "^15.1.0",
     "pg": "^8.23.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "@electric-sql/pglite-socket": "^0.2.11",
     "@types/node": "^22.0.0",
     "@types/pg": "^8.23.1",
     "@types/react": "^19.0.0",
