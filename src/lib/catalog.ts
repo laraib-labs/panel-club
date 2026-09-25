@@ -171,22 +171,22 @@ function catalogToViewFromRows(
 
 async function catalogToViewPg(pool: pg.Pool): Promise<Catalog> {
   const [showsResult, episodesResult, sourcesResult, hostsResult, guestsResult] = await Promise.all([
-    pool.query<ShowRow>("SELECT * FROM shows ORDER BY name"),
-    pool.query<EpisodeRow>("SELECT * FROM episodes"),
+    pool.query<ShowRow>("SELECT * FROM panel_club.shows ORDER BY name"),
+    pool.query<EpisodeRow>("SELECT * FROM panel_club.episodes"),
     pool.query<SourceRow>(
-      "SELECT show_slug, kind, playlist_id, channel_id, handle FROM sources",
+      "SELECT show_slug, kind, playlist_id, channel_id, handle FROM panel_club.sources",
     ),
     pool.query<{ show_slug: string; name: string }>(`
       SELECT sc.show_slug, p.name
-      FROM show_credits sc
-      JOIN people p ON p.slug = sc.person_slug
+      FROM panel_club.show_credits sc
+      JOIN panel_club.people p ON p.slug = sc.person_slug
       WHERE sc.role = 'host'
       ORDER BY sc.show_slug, p.name
     `),
     pool.query<{ episode_id: string; name: string }>(`
       SELECT ec.episode_id, p.name
-      FROM episode_credits ec
-      JOIN people p ON p.slug = ec.person_slug
+      FROM panel_club.episode_credits ec
+      JOIN panel_club.people p ON p.slug = ec.person_slug
       WHERE ec.role = 'guest'
       ORDER BY ec.episode_id, p.name
     `),
