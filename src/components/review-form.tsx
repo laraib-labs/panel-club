@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { chipClassName } from "./chip-styles.ts";
 
@@ -104,6 +105,14 @@ function StarPicker({ name }: { name: string }) {
 
 export function ReviewForm({ action, defaultDisplayName = "Panel Club fan" }: ReviewFormProps) {
   const [state, formAction, pending] = useActionState(action, initialReviewState);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (state.status === "success") {
+      router.refresh();
+    }
+  }, [router, state.status]);
+
   return (
     <form
       className="grid gap-4 rounded-card border border-border-subtle bg-surface p-5"
