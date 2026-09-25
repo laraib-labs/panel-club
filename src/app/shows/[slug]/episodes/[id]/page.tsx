@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { cookies, headers } from "next/headers";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 
 import { Player } from "../../../../../components/player.tsx";
 import { SiteHeader } from "../../../../../components/site-header.tsx";
@@ -10,16 +11,12 @@ import {
   ReviewThreadCard,
   type ReviewThreadItem,
 } from "../../../../../components/review-form.tsx";
-import { getEpisode, getShow, loadAppCatalog } from "../../../../../lib/catalog.ts";
+import { loadAppCatalog } from "../../../../../lib/catalog-cache.ts";
+import { getEpisode, getShow, type Episode } from "../../../../../lib/catalog.ts";
 import { parseClientIp, takeReviewSlot } from "../../../../../lib/review-rate-limit.ts";
 import { getReviewsPool } from "../../../../../lib/reviews-db.ts";
-import {
-  averageScore,
-  listReviewThread,
-  saveReply,
-  saveReview,
-} from "../../../../../lib/reviews-pg.ts";
-import type { ReviewThread } from "../../../../../lib/reviews.ts";
+import { listReviewThread, saveReply, saveReview } from "../../../../../lib/reviews-pg.ts";
+import { averageScoreFromThreads, type ReviewThread } from "../../../../../lib/reviews.ts";
 
 export const dynamic = "force-dynamic";
 
@@ -190,6 +187,46 @@ async function submitReply(
   revalidatePath(`/shows/${slug}/episodes/${episodeId}`);
 }
 
+/**
+ * Everything that depends on the reviews DB round trip, isolated behind its
+ * own Suspense boundary so the shell (title, player, guests) can paint
+ * without waiting on it — the biggest perceived-latency win on a cold Neon
+ * connection. Score is derived from the same threads query, not a second
+ * round trip (see averageScoreFromThreads).
+ */
+async function ReviewsSection({ slug, episode }: { slug: string; episode: Episode }) {
+  const pool = getReviewsPool();
+  const threads = await listReviewThread(pool, episode.videoId);
+  const reviewCount = threads.length;
+  const score = averageScoreFromThreads(threads);
+  const cookieStore = await cookies();
+  const viewer = parseViewerCookie(cookieStore.get("pc_viewer")?.value);
+  const submit = submitReview.bind(null, slug, episode.videoId);
+  const reply = submitReply.bind(null, slug, episode.videoId);
+  const threadItems = toReviewThreadItems(threads);
+
+  return (
+    <>
+      <p className="m-0 text-sm text-text-muted">{formatScore(score, reviewCount)}</p>
+
+      {threadItems.length === 0 ? (
+        <p className="m-0 text-sm text-text-muted">Be the first.</p>
+      ) : (
+        threadItems.map((thread) => (
+          <ReviewThreadCard
+            key={thread.id}
+            thread={thread}
+            replyAction={reply}
+            defaultDisplayName={viewer?.displayName ?? ""}
+          />
+        ))
+      )}
+
+      <ReviewForm action={submit} defaultDisplayName={viewer?.displayName ?? ""} />
+    </>
+  );
+}
+
 export default async function EpisodePage({
   params,
 }: {
@@ -204,64 +241,50 @@ export default async function EpisodePage({
     notFound();
   }
 
-  const pool = getReviewsPool();
-  const threads = await listReviewThread(pool, id);
-  const reviewCount = threads.length;
-  const score = await averageScore(pool, id);
-  const cookieStore = await cookies();
-  const viewer = parseViewerCookie(cookieStore.get("pc_viewer")?.value);
-  const submit = submitReview.bind(null, slug, id);
-  const reply = submitReply.bind(null, slug, id);
-  const threadItems = toReviewThreadItems(threads);
-
   const guests = splitGuestNames(episode.guest);
   const statusLabel = episode.status === "upcoming" ? "Upcoming" : "Aired";
 
   return (
     <>
       <SiteHeader />
-      <main className="pad">
-        <p className="meta">
-          <a href={`/shows/${slug}`}>{show.name}</a> / {episode.title}
-        </p>
-        <h1>{episode.title}</h1>
-        {episode.mediaUrl ? (
-          <p className="meta">Not in the YouTube seed. Shown only so Cast has a place.</p>
-        ) : (
+      <main className="mx-auto grid max-w-[1080px] gap-6 px-5 pb-7 pt-6 lg:grid-cols-[1fr_320px] lg:items-start">
+        <div className="grid gap-3">
           <p className="meta">
-            Playing on this page · {formatDuration(episode.duration)} · {statusLabel} · {formatScore(score, reviewCount)}
+            <a href={`/shows/${slug}`}>{show.name}</a> / {episode.title}
           </p>
-        )}
+          <h1 className="m-0 text-2xl leading-[1.1] tracking-[-0.02em] text-text sm:text-[28px]">
+            {episode.title}
+          </h1>
+          {episode.mediaUrl ? (
+            <p className="meta">Not in the YouTube seed. Shown only so Cast has a place.</p>
+          ) : (
+            <p className="meta">
+              Playing on this page · {formatDuration(episode.duration)} · {statusLabel}
+            </p>
+          )}
 
-        <Player
-          episodeId={id}
-          videoId={episode.videoId}
-          mediaUrl={episode.mediaUrl}
-          title={episode.title}
-        />
+          <Player
+            episodeId={id}
+            videoId={episode.videoId}
+            mediaUrl={episode.mediaUrl}
+            title={episode.title}
+          />
 
-        {episode.mediaUrl ? (
-          <p className="note">Cast opens the device picker. Play and pause stay on this page.</p>
-        ) : null}
+          {episode.mediaUrl ? (
+            <p className="note">Cast opens the device picker. Play and pause stay on this page.</p>
+          ) : null}
 
-        {guests.length > 0 ? (
-          <p className="meta">Guests: {guests.join(", ")}</p>
-        ) : null}
+          {guests.length > 0 ? (
+            <p className="meta">Guests: {guests.join(", ")}</p>
+          ) : null}
+        </div>
 
-        {threadItems.length === 0 ? (
-          <p className="meta">Be the first.</p>
-        ) : (
-          threadItems.map((thread) => (
-            <ReviewThreadCard
-              key={thread.id}
-              thread={thread}
-              replyAction={reply}
-              defaultDisplayName={viewer?.displayName ?? ""}
-            />
-          ))
-        )}
-
-        <ReviewForm action={submit} defaultDisplayName={viewer?.displayName ?? ""} />
+        <aside className="grid gap-3 lg:sticky lg:top-[86px]">
+          <h2 className="m-0 text-xs uppercase tracking-[0.1em] text-text-muted">Reviews</h2>
+          <Suspense fallback={<p className="m-0 text-sm text-text-muted">Loading reviews…</p>}>
+            <ReviewsSection slug={slug} episode={episode} />
+          </Suspense>
+        </aside>
       </main>
     </>
   );

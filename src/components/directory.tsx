@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 
 import type { Catalog, Show } from "../lib/catalog.ts";
 import { SHOW_CATEGORIES, type ShowCategory, filterShows } from "../lib/filters.ts";
+import { chipClassName } from "./chip-styles.ts";
+import { SearchField } from "./search-field.tsx";
 import { ShowCard } from "./show-card.tsx";
 
 export type DirectoryShow = {
@@ -33,27 +35,25 @@ export function Directory({ catalog, shows }: DirectoryProps) {
   }, [catalog, shows, query, category]);
 
   return (
-    <div className="pad">
-      <h3>Find your kind of funny</h3>
-      <p className="meta">{catalog.shows.length} shows. Search, then open a show.</p>
+    <div className="mx-auto grid max-w-[1080px] gap-4 px-5 pb-7 pt-5">
+      <h1 className="m-0 text-2xl leading-[1.15] tracking-[-0.02em] text-text">
+        Find your kind of funny
+      </h1>
+      <p className="m-0 text-text-muted">{catalog.shows.length} shows. Search, then open a show.</p>
 
-      <label className="search-row">
-        <span className="meta">Search</span>
-        <input
-          type="search"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search shows, hosts, guests or episodes"
-          aria-label="Search shows, hosts, guests or episodes"
-        />
-      </label>
+      <SearchField
+        value={query}
+        onChange={setQuery}
+        placeholder="Search shows, hosts, guests or episodes"
+        ariaLabel="Search shows, hosts, guests or episodes"
+      />
 
-      <div className="filters" aria-label="Categories">
+      <div className="flex flex-wrap items-center gap-2" aria-label="Categories">
         {SHOW_CATEGORIES.map((value) => (
           <button
             key={value}
             type="button"
-            className={category === value ? "filter-btn on" : "filter-btn"}
+            className={chipClassName(category === value)}
             onClick={() => setCategory(value)}
           >
             {value}
@@ -62,11 +62,11 @@ export function Directory({ catalog, shows }: DirectoryProps) {
       </div>
 
       {filtered.length === 0 ? (
-        <div className="empty">
-          <p className="meta">No shows match “{emptyLabel}”.</p>
+        <div className="m-0 rounded-xl bg-surface p-4.5 text-text">
+          <p className="m-0 text-text-muted">No shows match “{emptyLabel}”.</p>
           <button
             type="button"
-            className="filter-btn"
+            className={`${chipClassName(false)} mt-3`}
             onClick={() => {
               setQuery("");
               setCategory("All shows");
@@ -76,7 +76,7 @@ export function Directory({ catalog, shows }: DirectoryProps) {
           </button>
         </div>
       ) : (
-        <div className="grid">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
           {filtered.map((entry) => (
             <ShowCard
               key={entry.slug}

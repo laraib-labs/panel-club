@@ -91,6 +91,13 @@ export function listLibrary(storage: LibraryStorage): LibraryRecord[] {
   return Object.values(data);
 }
 
+export function getLibraryRecord(
+  storage: LibraryStorage,
+  episodeId: string,
+): LibraryRecord | undefined {
+  return readLibrary(storage)[episodeId];
+}
+
 export function createBrowserStorage(): LibraryStorage {
   return {
     get(key: string) {

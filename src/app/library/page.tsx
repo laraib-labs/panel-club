@@ -1,8 +1,9 @@
 import { LibraryBrowser } from "../../components/library-list.tsx";
 import { SiteHeader } from "../../components/site-header.tsx";
-import { loadAppCatalog, slugFromName } from "../../lib/catalog.ts";
+import { loadAppCatalog } from "../../lib/catalog-cache.ts";
+import { slugFromName } from "../../lib/catalog.ts";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export default async function Page() {
   const catalog = await loadAppCatalog();

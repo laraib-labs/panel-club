@@ -3,6 +3,7 @@
 import { useEffect, useState, type RefObject } from "react";
 
 import { castDecision } from "../lib/cast.ts";
+import { chipClassName } from "./chip-styles.ts";
 
 type CastButtonProps = {
   videoRef: RefObject<HTMLVideoElement | null>;
@@ -47,7 +48,7 @@ export function CastButton({ videoRef }: CastButtonProps) {
 
   return (
     <button
-      className="pill"
+      className={chipClassName(false)}
       type="button"
       onClick={() => {
         void videoRef.current?.remote?.prompt();
