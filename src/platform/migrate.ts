@@ -74,7 +74,7 @@ if (isMain) {
 
   const pg = await import("pg");
   const Pool = pg.Pool ?? pg.default.Pool;
-  const pool = new Pool({ connectionString: url });
+  const pool = new Pool({ connectionString: url, options: "-c search_path=panel_club,public" });
   try {
     const applied = await migratePostgres((sql, params) => pool.query(sql, params));
     console.log(JSON.stringify({ applied }));
